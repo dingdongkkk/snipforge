@@ -389,6 +389,11 @@ def _build_result(*, provider: str, c, model, contract: dict, cases: list[dict],
     # Report the best attempt (most frozen cases passing; later wins ties), so a bad repair cannot
     # replace better code. Every attempt stays in `attempts` for transparency.
     final = max(attempts, key=lambda a: (a["status"] == "passed", a["syntax"]["ok"], a["counts"]["pass"], a["attempt"]))
+    quality = None
+    if final["syntax"]["ok"] and final["policy"] and final["policy"]["status"] != "fail":
+        from .quality import quality_report
+        from .reporting import pytest_file
+        quality = quality_report(final["code"], pytest_file({"contract": contract, "test_cases": cases}) if cases else None)
     return {
         "type": "result",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -418,6 +423,7 @@ def _build_result(*, provider: str, c, model, contract: dict, cases: list[dict],
                      for a in attempts],
         "hashes": {"code": stable_hash(final["code"]), "contract": stable_hash(contract), "test_set": test_set_hash},
         "model_calls": calls,
+        "quality": quality,
         "consensus": None,
         "test_designer": {"provider": provider, "model": getattr(c, "model", model), "independent": False},
         "timings": timings,

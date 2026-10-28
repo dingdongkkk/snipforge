@@ -70,7 +70,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _body(self) -> dict:
         n = int(self.headers.get("Content-Length", 0) or 0)
-        if n > 2_000_000:
+        if n > 12_000_000:  # base64 upload of an 8 MB file
             raise ValueError("request too large")
         return json.loads(self.rfile.read(n) or b"{}")
 
@@ -81,7 +81,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"providers": public_providers(), "default_provider": DEFAULT_PROVIDER,
                                "max_repairs": MAX_REPAIRS, "demos": DEMOS,
                                "test_provider": TEST_PROVIDER, "test_model": TEST_MODEL,
-                               "fixture": os.getenv("SNIPFORGE_FIXTURE") == "1", "execution_mode": execution_mode(),
+                               "fixture": os.getenv("SNIPFORGE_FIXTURE") == "1",
+                               "tools": {**__import__("snipforge.quality", fromlist=["tools"]).tools(),
+                                         **__import__("snipforge.ingest", fromlist=["capabilities"]).capabilities()}, "execution_mode": execution_mode(),
                                "kb_size": len(pipeline.get_retriever().items), "runs": reporting.list_runs()})
         if self.path.startswith("/api/runs/"):
             run = reporting.load_run(self.path.rsplit("/", 1)[-1])
@@ -143,7 +145,15 @@ class Handler(BaseHTTPRequestHandler):
                                                    max_repairs=self._repairs(body)))
             return self._stream(evolve.run_revision(run, run_id, body.get("contract") or {}, body.get("change", ""),
                                                     provider, model, max_repairs=self._repairs(body), **tests))
-        if self.path in ("/api/run", "/api/run-tests"):
+        if self.path == "/api/upload":
+            import base64
+            from snipforge.ingest import IngestError, extract_text
+            try:
+                data = base64.b64decode(body.get("data", ""), validate=True)
+                return self._json(extract_text(body.get("name", ""), data))
+            except (IngestError, ValueError) as e:
+                return self._json({"error": str(e)}, 400)
+        if self.path in ("/api/run", "/api/run-tests", "/api/quality"):
             return self._playground(body)
         if self.path == "/api/accept":
             run = reporting.load_run(body.get("run_id", ""))
@@ -170,6 +180,9 @@ class Handler(BaseHTTPRequestHandler):
         policy = policy_check(code, run["contract"])
         if policy["status"] == "fail":
             return self._json({"ok": False, "kind": "blocked", "message": "; ".join(policy["blocked"])})
+        if self.path == "/api/quality":
+            from snipforge.quality import quality_report
+            return self._json({"ok": True, **quality_report(code, reporting.pytest_file(run) if run["test_cases"] else None)})
         if self.path == "/api/run":
             args, kwargs = body.get("args", []), body.get("kwargs", {}) or {}
             if not isinstance(args, list) or not isinstance(kwargs, dict):

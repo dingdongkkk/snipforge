@@ -9,3 +9,4 @@ data/runs_fixture/
 .DS_Store
 .playwright-cli/
 output/
+.venv/

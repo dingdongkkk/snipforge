@@ -44,12 +44,19 @@ Every change produces a new **run version** linked to its parent. The ZIP bundle
 The model budget is **3 calls + 1 optional repair**, plus at most one schema-recovery call per phase.
 Nothing runs on page re-render; every stage starts from an explicit click.
 
-## Quick start (Python 3.12, standard library only)
+## Quick start (Python 3.12)
 
 ```bash
-cp .env.example .env          # add GROQ_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY, or use Ollama
-python server.py              # http://localhost:8000
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt   # pytest, pylint, pypdf (optional but recommended)
+cp .env.example .env          # add OPENROUTER_API_KEY / GROQ_API_KEY / GEMINI_API_KEY, or use Ollama
+.venv/bin/python server.py    # http://localhost:8000
 ```
+
+The core runs on the standard library alone (`python3.12 server.py`). Without the extras, pytest/pylint/PDF
+upload report "not installed" instead of pretending. Image upload needs the Tesseract binary.
+
+**Also included:** ⬆ requirement upload (.txt/.md/.docx/.pdf/image via OCR, drag-and-drop), a real **pytest** run of
+the frozen tests plus a **pylint** score on every snippet, and the **▶ Run** playground.
 
 * **Local SLM:** pick *Ollama* in the UI. Set `OLLAMA_MODEL` to the exact tag from `ollama list`,
   and run a dev eval before trusting it.

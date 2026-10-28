@@ -35,6 +35,9 @@ If you run short, cut **Revise** first, then **Ambiguous**. Never cut the eviden
 
 5. **▶ Run (instant playground).** Edit the code, type inputs (JSON), and see the return value, exceptions and `print` output in milliseconds, with no AI call. "Run frozen tests" re-checks your edits against the frozen tests in about a second. *Why it matters:* a fast, tangible demo, and developers can poke at the code before trusting it.
 
+6. **pytest + pylint + upload.** Every snippet's frozen tests also run under real **pytest**, and **pylint** scores the code.
+   Requirements can be **uploaded** (Word, PDF, Markdown, or a photo/screenshot via OCR).
+
 ### Show if time allows
 5. **🧬 Test the tests (mutation testing).** Plant small bugs, see which the tests catch, no AI calls. Strongest technical point.
 6. **✎ Revise.** Versioned requirements; unchanged tests kept as regression checks; code diff v1 → v2.

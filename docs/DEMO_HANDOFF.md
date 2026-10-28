@@ -10,7 +10,7 @@
 
 ```bash
 cd ~/Downloads/codesnippet
-python3.12 server.py            # open http://localhost:8000
+.venv/bin/python server.py      # open http://localhost:8000 (the .venv has pytest, pylint, pypdf)
 ```
 
 **Pre-demo checklist**
@@ -89,6 +89,14 @@ If the live model gets it right first time, there's no repair to show. That's fi
 and press **⌘/Ctrl+Enter**. The return value, exception, and `print` output appear in milliseconds, with **no AI call**,
 in the same isolated sandbox. You can edit the code, then click **Run frozen tests** to re-check it against the frozen tests.
 **Demo trick:** introduce a bug on purpose (e.g. change `< 500` to `<= 500`), run the frozen tests, and watch them catch it.
+
+### ⬆ Upload + pytest + pylint
+- **Upload:** click **⬆ Upload requirement** or drop a .txt/.md/.docx/.pdf/image on the requirement box. Images go
+  through Tesseract OCR. The text lands in the box for you to review before Analyze.
+- **pytest + pylint:** every run ends with a real `pytest` run of the frozen tests (exported as `test_solution.py`)
+  and a pylint score. Both show in the Pipeline panel and at the top of the **Tests** tab, and in the ▶ Run tab you can
+  re-run them on edited code. **Say:** "We don't just trust our own checker: the same tests run under real pytest,
+  and pylint scores the code."
 
 ### ⑥ ⚡ Challenge this snippet (new)
 **Click:** the **⚡ Challenge** tab, then **Challenge this snippet**.

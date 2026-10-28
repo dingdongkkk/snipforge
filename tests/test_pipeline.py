@@ -101,6 +101,51 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(r["results"][0]["status"], "fail")
 
 
+class TestUpload(unittest.TestCase):
+    def test_text_and_docx(self):
+        from snipforge.ingest import extract_text
+        self.assertEqual(extract_text("r.md", b"Implement f(x).\r\n\r\n\r\nDouble it.")["text"], "Implement f(x).\n\nDouble it.")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("word/document.xml", "<w:document><w:body><w:p><w:r><w:t>Implement f(x).</w:t></w:r></w:p>"
+                                            "<w:p><w:r><w:t>Return x &amp; y.</w:t></w:r></w:p></w:body></w:document>")
+        r = extract_text("r.docx", buf.getvalue())
+        self.assertEqual((r["kind"], r["text"]), ("word", "Implement f(x).\nReturn x & y."))
+
+    def test_rejections(self):
+        from snipforge.ingest import IngestError, extract_text
+        for name, data in (("a.exe", b"MZ"), ("a.txt", b""), ("a.docx", b"not a zip")):
+            with self.assertRaises(IngestError):
+                extract_text(name, data)
+
+    def test_long_text_is_truncated(self):
+        from snipforge.ingest import MAX_CHARS, extract_text
+        r = extract_text("big.txt", b"x" * (MAX_CHARS + 50))
+        self.assertTrue(r["truncated"])
+        self.assertEqual(len(r["text"]), MAX_CHARS)
+
+
+class TestQualityTools(unittest.TestCase):
+    CODE = "def f(x):\n    \"\"\"Double.\"\"\"\n    return x * 2\n"
+
+    def test_reports_unavailable_instead_of_pretending(self):
+        from snipforge import quality
+        if quality.available("pytest"):
+            self.skipTest("pytest installed")
+        self.assertFalse(quality.run_pytest(self.CODE, "def test_a():\n    pass\n")["available"])
+
+    def test_real_pytest_and_pylint(self):
+        from snipforge import quality
+        if not (quality.available("pytest") and quality.available("pylint")):
+            self.skipTest("pytest/pylint not installed (use .venv)")
+        tests = "from solution import f\n\ndef test_ok():\n    assert f(2) == 4\n\ndef test_bad():\n    assert f(2) == 5\n"
+        pt = quality.run_pytest(self.CODE, tests)
+        self.assertEqual((pt["passed"], pt["failed"], pt["total"]), (1, 1, 2))
+        pl = quality.run_pylint(self.CODE)
+        self.assertGreaterEqual(pl["score"], 9.0)
+        self.assertLess(quality.run_pylint("import os\ndef f(x):\n  return y\n")["score"], 5.0)
+
+
 class TestPlayground(unittest.TestCase):
     CODE = 'def f(x, y=2):\n    print("hi", x)\n    if x < 0:\n        raise ValueError("neg")\n    return (x + y, x * y)\n'
 

@@ -137,6 +137,11 @@ ul.plain { margin: 4px 0 12px; padding-left: 18px; }
     <div class="card">
       <h3>1 · Requirement</h3>
       <textarea id="req" placeholder="Describe the function in plain English…"></textarea>
+      <div class="upload-row">
+        <button class="ghost" id="upbtn" type="button" title="Load a requirement from .txt, .md, .docx, .pdf or an image (OCR)">⬆ Upload requirement</button>
+        <span class="sub" id="uphint">or drop a file on the box · txt, md, docx, pdf, image</span>
+        <input type="file" id="upfile" hidden accept=".txt,.md,.markdown,.py,.json,.csv,.yaml,.yml,.rst,.docx,.pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp,.gif">
+      </div>
       <div class="chips" id="demos"></div>
       <details>
         <summary>Optional: function name and examples</summary>
@@ -207,6 +212,7 @@ const STEPS = [
   ["consensus", "Cross-check", "Independent implementations vote; tests they agree against are flagged"],
   ["validate", "Validate", "Syntax · policy · isolated execution"],
   ["repair", "Repair", "Code-only fix from real failures; tests stay frozen"],
+  ["quality", "pytest + pylint", "Real pytest run of the frozen tests; pylint score"],
 ];
 let cfg = null;
 let S = fresh();
@@ -431,6 +437,7 @@ function showResult(r) {
     banner(`<b>Recorded run</b>, originally executed ${esc(r.created_at.replace("T", " "))} UTC with ${esc(r.provider)} / ${esc(r.model)}. This is a replay, not a new live generation.`, "rec");
     renderSteps(); renderContract(); $("contractCard").hidden = true;
   }
+  setQualityStep(r);
   if (!r.repair_attempted) setStep("repair", r.status === "passed" ? "done" : "", r.status === "passed" ? "Not needed: passed on first attempt" : "Not attempted");
   else setStep("repair", r.status === "passed" ? "done" : "failed", `${r.attempts.length - 1} repair(s), code only · frozen tests unchanged: ${r.tests_unchanged ? "yes" : "NO"} → ${r.status.replace("_", " ")}`);
   const v = r.validation, c = v.counts, n = r.test_cases.length;
@@ -471,7 +478,7 @@ function renderPanel() {
   } else if (S.tab === "tests") {
     if (!S.cases.length) { p.innerHTML = `<div class="empty">Test cases are designed from the confirmed contract and frozen before any code is written.</div>`; return; }
     const res = Object.fromEntries((r ? r.validation.results : S.val?.results || []).map(x => [x.test_id, x]));
-    p.innerHTML = (S.rejected.length ? `<div class="banner">Rejected ${S.rejected.length} case(s): ${esc(S.rejected.join("; "))}</div>` : "") +
+    p.innerHTML = qualityHtml(r) + (S.rejected.length ? `<div class="banner">Rejected ${S.rejected.length} case(s): ${esc(S.rejected.join("; "))}</div>` : "") +
       `<div class="tablewrap"><table><tr><th>Case</th><th>Req</th><th>Call</th><th>Expected</th><th>Actual</th><th>Status</th></tr>` +
       S.cases.map(c => { const x = res[c.id];
         const call = callText(c), exp = expText(c);
@@ -528,6 +535,55 @@ function versionNote(r) {
     (r.regression ? ` · regression checks on unchanged behaviour: <b>${r.regression.pass}/${r.regression.total} pass</b>` : "") + `</div></div>`;
 }
 
+// ---------- pytest + pylint ----------
+function setQualityStep(r) {
+  const q = r.quality; if (!q) { setStep("quality", "warn", "Not run (code did not pass syntax/policy checks)"); return; }
+  const pt = q.pytest || {}, pl = q.pylint || {};
+  const ptTxt = pt.executed ? `pytest: ${pt.passed}/${pt.total} passed` : `pytest: ${pt.message || "not run"}`;
+  const plTxt = pl.score != null ? `pylint: ${pl.score.toFixed(1)}/10` : `pylint: ${pl.message || pl.error || "not run"}`;
+  const ok = pt.executed && !pt.failed && !pt.errors;
+  setStep("quality", !pt.executed && pl.score == null ? "warn" : ok ? "done" : "failed", `${ptTxt} · ${plTxt}`);
+}
+function qualityHtml(r) {
+  const q = r?.quality; if (!q) return "";
+  const pt = q.pytest || {}, pl = q.pylint || {};
+  const ptBadge = pt.executed ? `<b class="${pt.failed || pt.errors ? "bad" : "good"}">${pt.passed}/${pt.total} passed</b>${pt.duration_s != null ? ` <span class="sub">in ${pt.duration_s.toFixed(2)}s</span>` : ""}`
+    : `<span class="warn">${esc(pt.message || "not run")}</span>`;
+  const plBadge = pl.score != null ? `<b class="${pl.score >= 8 ? "good" : pl.score >= 5 ? "warn" : "bad"}">${pl.score.toFixed(2)}/10</b> <span class="sub">${pl.total_messages} message(s)</span>`
+    : `<span class="warn">${esc(pl.message || pl.error || "not run")}</span>`;
+  const fails = (pt.cases || []).filter(c => c.status !== "passed");
+  return `<div class="qgrid">
+    <div class="qcard"><div class="qtitle">pytest <span class="sub mono">${esc(pt.command || "")}</span></div>${ptBadge}
+      ${fails.length ? `<ul class="plain">${fails.map(c => `<li class="mono">${esc(c.name)}: ${esc(c.message.split("\n")[0])}</li>`).join("")}</ul>` : ""}
+      ${pt.output ? `<details><summary>pytest output</summary><div class="console"><code>${esc(pt.output)}</code></div></details>` : ""}</div>
+    <div class="qcard"><div class="qtitle">pylint</div>${plBadge}
+      ${(pl.messages || []).length ? `<ul class="plain">${pl.messages.slice(0, 8).map(m => `<li><span class="mono">L${m.line} ${esc(m.symbol)}</span> ${esc(m.message)}</li>`).join("")}</ul>` : (pl.score != null ? `<div class="sub">No issues.</div>` : "")}</div>
+  </div>`;
+}
+
+// ---------- requirement upload ----------
+async function uploadFile(file) {
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { toast("File is larger than 8 MB"); return; }
+  const hint = $("uphint"), old = hint.textContent;
+  hint.textContent = `Reading ${file.name}…`; $("upbtn").disabled = true;
+  try {
+    const b64 = await new Promise((ok, bad) => { const fr = new FileReader();
+      fr.onload = () => ok(String(fr.result).split(",")[1] || ""); fr.onerror = () => bad(fr.error); fr.readAsDataURL(file); });
+    const res = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: file.name, data: b64 }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    $("req").value = data.text; $("req").dispatchEvent(new Event("input")); $("req").focus();
+    hint.textContent = `Loaded ${file.name} (${data.kind}, ${data.chars} chars${data.truncated ? ", truncated to 4000" : ""}). Review it, then Analyze.`;
+  } catch (e) { hint.textContent = old; toast(String(e.message || e)); }
+  $("upbtn").disabled = false;
+}
+$("upbtn").onclick = () => $("upfile").click();
+$("upfile").onchange = () => { uploadFile($("upfile").files[0]); $("upfile").value = ""; };
+["dragenter", "dragover"].forEach(ev => $("req").addEventListener(ev, e => { e.preventDefault(); $("req").classList.add("dropping"); }));
+["dragleave", "drop"].forEach(ev => $("req").addEventListener(ev, () => $("req").classList.remove("dropping")));
+$("req").addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]); });
+
 // ---------- ▶ Run: instant playground (no model calls; same isolated sandbox) ----------
 function renderRun(p, r) {
   if (!r) return needRun(p);
@@ -555,7 +611,8 @@ function renderRun(p, r) {
         ${params.map(q => `<label class="field"><span>${esc(q.name)} <span class="muted">${esc(q.type || "")}${q.description && q.description.startsWith("default") ? " · " + esc(q.description) : ""}</span></span>
           <input type="text" class="mono" data-arg="${esc(q.name)}" value="${esc(pl.vals[q.name] ?? "")}" placeholder="${q.description && q.description.startsWith("default") ? "leave empty for default" : "JSON value"}"></label>`).join("")}
         <div class="toolbar" style="justify-content:flex-start;margin-top:10px">
-          <button class="primary" id="prun">▶ Run</button><button class="ghost" id="ptests">Run frozen tests (${r.test_cases.length})</button></div>
+          <button class="primary" id="prun">▶ Run</button><button class="ghost" id="ptests">Run frozen tests (${r.test_cases.length})</button>
+          <button class="ghost" id="pquality">pytest + pylint</button></div>
         <div id="pout" class="console" aria-live="polite">${pl.history.length ? pl.history.map(consoleEntry).join("") : `<code class="muted">Output appears here.</code>`}</div>
       </div>
     </div>`;
@@ -571,6 +628,7 @@ function renderRun(p, r) {
   });
   $("prun").onclick = playRun;
   $("ptests").onclick = playTests;
+  $("pquality").onclick = playQuality;
   $("preset").onclick = () => { pl.code = r.code; renderPanel(); };
 }
 
@@ -616,6 +674,26 @@ async function playRun() {
     const ms = Math.round(performance.now() - t0);
     pushConsole({ ...res, call, notes, meta: `${res.duration_ms ?? "–"} ms in function · ${ms} ms round trip${S.play.code !== r.code ? " · edited code" : ""}` });
   } catch (e) { pushConsole({ kind: "error", message: String(e.message || e), call }); }
+  btn.disabled = false;
+}
+
+async function playQuality() {
+  const r = S.result, btn = $("pquality"); btn.disabled = true;
+  try {
+    const res = await (await fetch("/api/quality", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ run_id: r.run_id, code: S.play.code }) })).json();
+    if (res.error) throw new Error(res.error);
+    if (!res.ok) pushConsole({ kind: res.kind, message: res.message, call: "pytest + pylint" });
+    else {
+      const pt = res.pytest || {}, pl = res.pylint || {};
+      const lines = [pt.executed ? `pytest: ${pt.passed}/${pt.total} passed${pt.failed ? `, ${pt.failed} failed` : ""}${pt.errors ? `, ${pt.errors} errors` : ""}` : `pytest: ${pt.message || "not run"}`]
+        .concat((pt.cases || []).filter(c => c.status !== "passed").map(c => `  ✗ ${c.name}: ${c.message.split("\n")[0]}`))
+        .concat([pl.score != null ? `pylint: ${pl.score.toFixed(2)}/10 (${pl.total_messages} message(s))` : `pylint: ${pl.message || pl.error || "not run"}`])
+        .concat((pl.messages || []).slice(0, 6).map(m => `  L${m.line} ${m.symbol}: ${m.message}`));
+      pushConsole({ kind: "tests", ok: pt.executed && !pt.failed && !pt.errors, text: lines.join("\n"),
+        call: `pytest + pylint${S.play.code !== r.code ? " on edited code" : ""}` });
+    }
+  } catch (e) { pushConsole({ kind: "error", message: String(e.message || e), call: "pytest + pylint" }); }
   btn.disabled = false;
 }
 
@@ -1145,6 +1223,16 @@ body.is-busy .busy-bar { opacity:1; }
   .stat { padding:9px 12px; }
   #banner .banner { max-height:30vh; overflow-y:auto; }
 }
+
+/* upload + quality */
+.upload-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; }
+.upload-row .sub { font-size:11px; }
+#req.dropping { border-color:var(--accent); box-shadow:0 0 0 3px var(--focus); background:var(--chip); }
+.qgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin-bottom:14px; }
+.qcard { border:1px solid var(--line); border-radius:4px; padding:10px 12px; background:var(--surface,var(--panel)); }
+.qcard .qtitle { font-weight:600; font-size:12px; margin-bottom:4px; display:flex; gap:8px; align-items:baseline; }
+.qcard ul.plain { margin:6px 0 0; font-size:12px; }
+.qcard details summary { margin-top:6px; }
 
 /* ▶ Run playground */
 .play { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(260px,1fr); gap:14px; align-items:start; }

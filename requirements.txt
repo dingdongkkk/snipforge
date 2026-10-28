@@ -1,3 +1,5 @@
-# SnipForge core runs on the Python 3.12 standard library only — nothing to install.
-# Optional: richer lint feedback (undefined names, unused imports) in the validator.
-pyflakes>=3.2
+# SnipForge core runs on the Python 3.12 standard library. These add optional, recommended checks:
+pytest>=8        # real pytest run of the frozen tests on every snippet
+pylint>=3        # code quality score + messages
+pypdf>=4         # .pdf requirement upload
+# Image (OCR) upload needs the Tesseract binary, not a pip package (on the TCS software list).

@@ -67,6 +67,19 @@ def report_md(result: dict) -> str:
            "## Requirement evidence", "", "| Requirement | Cases | Outcome |", "|---|---|---|"]
     for e in result["evidence"]:
         out.append(f"| {e['requirement_id']}: {e['text']} | {', '.join(e['cases']) or '-'} | {e['outcome']} |")
+    q = result.get("quality") or {}
+    pt, pl = q.get("pytest") or {}, q.get("pylint") or {}
+    out += ["", "## pytest + pylint", ""]
+    if pt.get("executed"):
+        out.append(f"- pytest: {pt.get('passed', 0)} passed, {pt.get('failed', 0)} failed, {pt.get('errors', 0)} errors "
+                   f"of {pt.get('total', 0)} (`{pt.get('command', 'pytest')}`, {pt.get('duration_s')}s)")
+    else:
+        out.append(f"- pytest: not run ({pt.get('message', 'unavailable')})")
+    if pl.get("score") is not None:
+        out.append(f"- pylint: {pl['score']:.2f}/10, {pl.get('total_messages', 0)} message(s) (disabled: {pl.get('disabled')})")
+        out += [f"  - line {m['line']}: {m['symbol']} ({m['id']}): {m['message']}" for m in pl.get("messages", [])[:15]]
+    else:
+        out.append(f"- pylint: not run ({pl.get('message') or pl.get('error') or 'unavailable'})")
     if result.get("version", 1) > 1:
         tc = result.get("test_changes") or {}
         out += ["", f"## Version {result['version']} (parent run `{result.get('parent_run_id')}`)", "",
