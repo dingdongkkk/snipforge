@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import re
 
-PROMPT_VERSION = "2.2"
+PROMPT_VERSION = "2.3"
 
 ANALYZE_SYSTEM = """You are a senior software analyst. Turn a natural-language feature requirement into a \
 precise, testable contract for ONE Python function with JSON-compatible inputs and outputs.
@@ -48,7 +48,8 @@ Rules:
 - The expected value must follow strictly from the contract. Do not test behaviour the contract leaves open.
 - Use only JSON values: tuples become lists, dict keys are strings, None is null, booleans are true/false.
 - Use exactly one of "expected" or "expected_exception" per case.
-- For floating-point results add "tolerance": 1e-9.
+- For floating-point results add "tolerance": 1e-9. If the function itself takes an accuracy/tolerance/precision
+  argument, the case "tolerance" must be no tighter than the accuracy that case passes in (or the default).
 - When the contract requires a specific numeric type (e.g. "return an integer"), add "strict_type": true
   so 40 and 40.0 are distinguished."""
 

@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(ROOT), str(ROOT / "tests")]
 os.environ.setdefault("SNIPFORGE_RUNS_DIR", str(ROOT / "data" / "runs_fixture"))
+os.environ["SNIPFORGE_FIXTURE"] = "1"  # the UI shows a loud "scripted fixture, not a real model" banner
 
 import server  # noqa: E402
 from fake_llm import ScriptedClient  # noqa: E402

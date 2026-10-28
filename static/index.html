@@ -234,6 +234,11 @@ function setStep(id, status, detail) {
 
 async function loadConfig() {
   cfg = await (await fetch("/api/config")).json();
+  if (cfg.fixture && !document.getElementById("fixture-flag")) {
+    const f = document.createElement("div"); f.id = "fixture-flag";
+    f.textContent = "TEST FIXTURE: scripted answers, not a real model. Every requirement returns the shipping_fee demo. Run python3.12 server.py for the real app.";
+    document.body.prepend(f);
+  }
   $("provider").innerHTML = cfg.providers.map(p =>
     `<option value="${p.id}" ${p.id === cfg.default_provider ? "selected" : ""} ${p.configured ? "" : "disabled"}>${esc(p.label)}${p.configured ? "" : " (no key)"}</option>`).join("");
   const sync = () => { const p = cfg.providers.find(x => x.id === $("provider").value); $("model").placeholder = p ? p.default_model : ""; };
@@ -262,7 +267,11 @@ function renderContract() {
   $("sig").textContent = `def ${c.function_name}(${params}) -> ${c.return_type}`;
   $("reqs").innerHTML = c.requirements.map((r, i) =>
     `<div class="req-row"><div class="req-id">R${i + 1}</div><textarea data-i="${i}" rows="1">${esc(r.text)}</textarea><button class="x" data-del="${i}" title="Remove">×</button></div>`).join("");
-  $("reqs").querySelectorAll("textarea").forEach(t => t.oninput = () => { S.contract.requirements[t.dataset.i].text = t.value; });
+  const fit = t => { t.style.height = "auto"; t.style.height = (t.scrollHeight + 2) + "px"; };
+  $("reqs").querySelectorAll("textarea").forEach(t => {
+    t.oninput = () => { S.contract.requirements[t.dataset.i].text = t.value; fit(t); };
+    requestAnimationFrame(() => fit(t));
+  });
   $("reqs").querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.contract.requirements.splice(+b.dataset.del, 1); renumber(); renderContract(); });
   $("assumptions").value = c.assumptions.join("\n");
   const qs = c.clarification_questions;
@@ -1023,6 +1032,12 @@ body.is-busy .busy-bar { opacity:1; }
   .stat { padding:9px 12px; }
   #banner .banner { max-height:30vh; overflow-y:auto; }
 }
+
+#fixture-flag { position:sticky; top:0; z-index:150; flex:none; padding:8px 16px; text-align:center; font-weight:600; font-size:12px;
+  background:var(--bad); color:#fff; letter-spacing:.2px; }
+
+/* Requirement boxes grow to fit their text (no clipped lines). */
+#reqs textarea { overflow:hidden; resize:none; field-sizing:content; min-height:36px; line-height:1.45; }
 
 /* Panel content crossfades on tab switch. */
 #panel.tab-swap { animation:panel-in .26s ease-out; }

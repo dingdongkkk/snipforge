@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -78,7 +79,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/config":
             return self._json({"providers": public_providers(), "default_provider": DEFAULT_PROVIDER,
                                "max_repairs": MAX_REPAIRS, "demos": DEMOS,
-                               "test_provider": TEST_PROVIDER, "test_model": TEST_MODEL, "execution_mode": execution_mode(),
+                               "test_provider": TEST_PROVIDER, "test_model": TEST_MODEL,
+                               "fixture": os.getenv("SNIPFORGE_FIXTURE") == "1", "execution_mode": execution_mode(),
                                "kb_size": len(pipeline.get_retriever().items), "runs": reporting.list_runs()})
         if self.path.startswith("/api/runs/"):
             run = reporting.load_run(self.path.rsplit("/", 1)[-1])

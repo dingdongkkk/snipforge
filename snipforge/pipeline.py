@@ -43,7 +43,10 @@ def get_retriever() -> Retriever:
     return _retriever
 
 
-_NAMED_CALL = re.compile(r"(?<![\w.])([A-Za-z_][A-Za-z0-9_]*)\(")
+# A signature is binding only when the requirement DECLARES it ("Implement shipping_fee(total, express)",
+# "Write slugify(text)", "a function named f(x)"). Math notation such as "computes sin(x)" is not a signature.
+_NAMED_CALL = re.compile(r"(?:\b(?:implement|write|create|define|build|code|named|called|function|method)\s+`?)"
+                         r"([A-Za-z_][A-Za-z0-9_]*)\(", re.I)
 _NOT_NAMES = {"e", "eg", "i", "ie", "if", "and", "or", "not", "list", "dict", "str", "int", "float", "set", "tuple"}
 
 
