@@ -1,0 +1,3 @@
+# SnipForge core runs on the Python 3.12 standard library only — nothing to install.
+# Optional: richer lint feedback (undefined names, unused imports) in the validator.
+pyflakes>=3.2

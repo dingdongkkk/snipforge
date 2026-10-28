@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+data/.emb_*.json
+data/kb_user.jsonl
+data/runs/
+data/runs_fixture/
+.claude/
+.DS_Store
+.playwright-cli/
+output/

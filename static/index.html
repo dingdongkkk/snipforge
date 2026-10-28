@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SnipForge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/diff.min.js"></script>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #14171f; --muted: #646b7a; --line: #e3e6ec;
+  --accent: #4f46e5; --accent-ink: #ffffff; --ok: #0f9d58; --warn: #b45309; --bad: #dc2626;
+  --code-bg: #0f1420; --chip: #eef0f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0e14; --panel: #131824; --ink: #e7eaf0; --muted: #8c94a6; --line: #232a3a;
+    --accent: #818cf8; --accent-ink: #0b0e14; --chip: #1c2232; --code-bg: #0a0d15; --warn: #f59e0b;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 Inter, system-ui, sans-serif; }
+header { display: flex; align-items: center; gap: 12px 16px; padding: 12px 24px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+.logo { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+.logo span { color: var(--accent); }
+.sub { color: var(--muted); font-size: 13px; }
+.spacer { flex: 1; }
+select, input[type=text], input[type=number] { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; max-width: 100%; }
+main { display: grid; grid-template-columns: minmax(320px, 440px) minmax(0, 1fr); gap: 20px; padding: 20px 24px; max-width: 1500px; margin: 0 auto; }
+@media (max-width: 960px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 12px 16px; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.card h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+textarea { width: 100%; resize: vertical; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+#req { min-height: 120px; }
+textarea:focus, select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.chip { background: var(--chip); border: 0; color: var(--ink); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+.chip:hover { outline: 1px solid var(--accent); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.field { display: grid; gap: 4px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.field input, .field textarea { font-size: 13px; color: var(--ink); }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-top: 10px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+button.primary:disabled, button.ghost:disabled { opacity: .5; cursor: not-allowed; }
+button.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+button.ghost:hover:not(:disabled) { border-color: var(--accent); }
+button.x { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; }
+.req-row { display: grid; grid-template-columns: 34px 1fr 22px; gap: 6px; align-items: start; margin-bottom: 6px; }
+.req-id { font-weight: 600; font-size: 12px; color: var(--accent); padding-top: 8px; }
+.req-row textarea { min-height: 36px; padding: 6px 8px; font-size: 13px; }
+.q { background: color-mix(in srgb, var(--warn) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); border-radius: 10px; padding: 10px; margin-top: 8px; }
+.q b { display: block; margin-bottom: 6px; font-size: 13px; }
+.mcq { border: 0; margin: 10px 0 0; padding: 0; min-width: 0; }
+.mcq legend { font-weight: 600; font-size: 13px; padding: 0; margin-bottom: 2px; }
+.mcq .why { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.opt { display: flex; gap: 8px; align-items: flex-start; padding: 7px 10px; margin-top: 5px; border: 1px solid var(--line);
+       border-radius: 8px; background: var(--panel); cursor: pointer; font-size: 13px; }
+.opt:hover { border-color: var(--accent); }
+.opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.opt input[type=radio] { margin-top: 2px; accent-color: var(--accent); }
+.opt .rec { font-size: 11px; color: var(--accent); font-weight: 600; margin-left: auto; white-space: nowrap; }
+.opt input[type=text] { flex: 1; min-width: 0; padding: 4px 8px; font-size: 13px; }
+.sig { background: var(--chip); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; overflow-x: auto; white-space: nowrap; }
+.steps { list-style: none; margin: 0; padding: 0; }
+.steps li { display: grid; grid-template-columns: 20px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.steps li:last-child { border-bottom: 0; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); margin-top: 3px; }
+.dot.running { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+.dot.done { background: var(--ok); border-color: var(--ok); }
+.dot.failed { background: var(--bad); border-color: var(--bad); }
+.dot.warn { background: var(--warn); border-color: var(--warn); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.step-name { font-weight: 600; font-size: 13px; }
+.step-detail { color: var(--muted); font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+.statusbar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 700px) { .statusbar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; min-width: 0; }
+.stat .v { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.good { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); } .muted { color: var(--muted); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 12px; overflow-x: auto; }
+.tab { background: none; border: 0; color: var(--muted); padding: 8px 12px; font: inherit; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+pre { margin: 0; background: var(--code-bg); color: #e6edf3; border-radius: 10px; padding: 14px; overflow: auto; max-height: 560px; font: 13px/1.55 "JetBrains Mono", ui-monospace, monospace; }
+pre code.hljs { background: transparent; padding: 0; }
+.toolbar { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 10px; flex-wrap: wrap; }
+.empty { color: var(--muted); text-align: center; padding: 56px 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tablewrap { overflow-x: auto; }
+.pill { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.pass, .pill.passed { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.pill.fail, .pill.failed, .pill.error, .pill.timeout { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+.pill.not_executed, .pill.not-tested, .pill.not-executed { background: var(--chip); color: var(--muted); }
+.banner { border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--line); background: var(--panel); }
+.banner.err { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--panel)); }
+.banner.rec { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, var(--panel)); }
+.banner.find { border-color: var(--bad); }
+.banner.find .big { font-weight: 700; color: var(--bad); }
+.banner.info { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+.pill.detected, .pill.added { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.pill.survived, .pill.modified { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.pill.disputed { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.pill.unchanged { background: var(--chip); color: var(--muted); }
+.pill.removed { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); text-decoration: line-through; }
+.lead { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+#change { min-height: 70px; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+ul.plain { margin: 4px 0 12px; padding-left: 18px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Snip<span>Forge</span></div>
+  <div class="sub">Requirements → Python, with test evidence</div>
+  <div class="spacer"></div>
+  <span class="badge" id="execbadge">execution: …</span>
+  <select id="runs" aria-label="Recorded runs"><option value="">Recorded runs…</option></select>
+  <select id="provider" aria-label="Provider"></select>
+  <input id="model" type="text" placeholder="model (default)" aria-label="Code model" style="width:200px">
+  <label class="sub" for="tprovider">Tests by</label>
+  <select id="tprovider" aria-label="Test designer provider" title="An independent model designs the tests and challenge cases"></select>
+  <input id="tmodel" type="text" placeholder="test model (default)" aria-label="Test model" style="width:170px" hidden>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h3>1 · Requirement</h3>
+      <textarea id="req" placeholder="Describe the function in plain English…"></textarea>
+      <div class="chips" id="demos"></div>
+      <details>
+        <summary>Optional: function name and examples</summary>
+        <label class="field">Function name<input id="fname" type="text" placeholder="e.g. shipping_fee" class="mono"></label>
+        <label class="field">Examples, one per line: <span class="mono">[args] =&gt; expected</span>
+          <textarea id="examples" rows="3" class="mono" placeholder="[499, false] => 40&#10;[500, true] => 60"></textarea></label>
+      </details>
+      <div class="row"><div class="spacer"></div><button class="primary" id="analyze">Analyze ⌘↵</button></div>
+    </div>
+
+    <div class="card" id="contractCard" hidden>
+      <h3>2 · Contract <span class="badge" id="cstate"></span></h3>
+      <div class="sig mono" id="sig"></div>
+      <div class="sub" style="margin-bottom:6px">Requirements (editable; each gets its own tests)</div>
+      <div id="reqs"></div>
+      <button class="ghost" id="addreq" style="margin-top:2px">+ Add requirement</button>
+      <label class="field">Assumptions (one per line)<textarea id="assumptions" rows="3"></textarea></label>
+      <div id="questions"></div>
+      <div class="row">
+        <label class="sub">Max repairs <input id="repairs" type="number" min="0" max="3" value="1" style="width:56px"></label>
+        <div class="spacer"></div>
+        <button class="ghost" id="refine" hidden>Update with answers</button>
+        <button class="primary" id="confirm">Confirm &amp; generate</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pipeline</h3>
+      <ul class="steps" id="steps"></ul>
+    </div>
+    <div class="sub" id="kbinfo"></div>
+  </section>
+
+  <section style="min-width:0">
+    <div id="banner"></div>
+    <div class="statusbar" id="statusbar" hidden>
+      <div class="stat"><div class="v" id="s-status">–</div><div class="k">Result</div></div>
+      <div class="stat"><div class="v" id="s-syntax">–</div><div class="k">Syntax</div></div>
+      <div class="stat"><div class="v" id="s-exec">–</div><div class="k">Execution</div></div>
+      <div class="stat"><div class="v" id="s-tests">–</div><div class="k">Test cases</div></div>
+      <div class="stat"><div class="v" id="s-reqs">–</div><div class="k">Requirements evidenced</div></div>
+    </div>
+    <div class="card">
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="evidence">Requirement evidence</button>
+        <button class="tab" data-tab="code">Code</button>
+        <button class="tab" data-tab="tests">Tests</button>
+        <button class="tab" data-tab="challenge">⚡ Challenge</button>
+        <button class="tab" data-tab="revise">✎ Revise</button>
+        <button class="tab" data-tab="mutation">🧬 Test the tests</button>
+        <button class="tab" data-tab="explain">Explanation</button>
+        <button class="tab" data-tab="trace">Trace</button>
+      </div>
+      <div id="panel"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const STEPS = [
+  ["contract", "Contract", "Requirement → numbered, testable requirements"],
+  ["retrieve", "Retrieve", "Nearest verified snippets from the team library"],
+  ["tests", "Design tests", "From the contract only, then frozen"],
+  ["generate", "Generate code", "Never sees the tests"],
+  ["consensus", "Cross-check", "Independent implementations vote; tests they agree against are flagged"],
+  ["validate", "Validate", "Syntax · policy · isolated execution"],
+  ["repair", "Repair", "Code-only fix from real failures; tests stay frozen"],
+];
+let cfg = null;
+let S = fresh();
+function fresh() { return { tab: "evidence", contract: null, analysis: null, cases: [], rejected: [], evidence: [], gen: null, val: null, result: null, examples: [], trace: [], busy: false }; }
+
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function j(v) { return esc(JSON.stringify(v)); }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1800); }
+function hl(src, lang = "python") {
+  let html = esc(src);
+  try { if (window.hljs) html = hljs.highlight(src, { language: lang }).value; } catch (e) {}
+  return `<pre><code class="hljs">${html}</code></pre>`;
+}
+const pill = (s) => `<span class="pill ${esc(String(s).replace(/ /g, "-"))}">${esc(String(s).replace("_", " "))}</span>`;
+function banner(html, kind = "err") { $("banner").innerHTML = html ? `<div class="banner ${kind}">${html}</div>` : ""; }
+
+function renderSteps() {
+  $("steps").innerHTML = STEPS.map(([id, name, desc]) =>
+    `<li><div class="dot" id="dot-${id}"></div><div><div class="step-name">${name}</div><div class="step-detail" id="det-${id}">${desc}</div></div></li>`).join("");
+}
+function setStep(id, status, detail) {
+  const d = $("dot-" + id); if (!d) return;
+  d.className = "dot " + status;
+  if (detail !== undefined) $("det-" + id).textContent = detail;
+}
+
+async function loadConfig() {
+  cfg = await (await fetch("/api/config")).json();
+  $("provider").innerHTML = cfg.providers.map(p =>
+    `<option value="${p.id}" ${p.id === cfg.default_provider ? "selected" : ""} ${p.configured ? "" : "disabled"}>${esc(p.label)}${p.configured ? "" : " (no key)"}</option>`).join("");
+  const sync = () => { const p = cfg.providers.find(x => x.id === $("provider").value); $("model").placeholder = p ? p.default_model : ""; };
+  $("provider").onchange = sync; sync();
+  $("tprovider").innerHTML = `<option value="">same model as code</option>` + cfg.providers.filter(p => p.configured).map(p =>
+    `<option value="${p.id}" ${p.id === cfg.test_provider ? "selected" : ""}>${esc(p.label)}</option>`).join("");
+  if (cfg.test_model) $("tmodel").value = cfg.test_model;
+  const tsync = () => { const p = cfg.providers.find(x => x.id === $("tprovider").value); $("tmodel").hidden = !p; $("tmodel").placeholder = p ? p.default_model : ""; };
+  $("tprovider").onchange = tsync; tsync();
+  $("repairs").value = cfg.max_repairs;
+  const em = cfg.execution_mode;
+  $("execbadge").textContent = em === "docker" ? "execution: container" : em === "process" ? "execution: isolated process" : "execution: unavailable";
+  $("execbadge").className = "badge " + (em === "none" ? "warn" : "");
+  $("demos").innerHTML = cfg.demos.map((d, i) => `<button class="chip" data-i="${i}">${esc(d.label)}</button>`).join("");
+  document.querySelectorAll("#demos .chip").forEach(b => b.onclick = () => { $("req").value = cfg.demos[b.dataset.i].requirement; $("req").focus(); });
+  $("runs").innerHTML = `<option value="">Recorded runs (${cfg.runs.length})…</option>` +
+    cfg.runs.map(r => `<option value="${esc(r.id)}">${esc(r.function)} · ${esc(r.status)} · ${esc(r.created_at.replace("T", " ").slice(0, 16))}</option>`).join("");
+  $("kbinfo").textContent = `Library: ${cfg.kb_size} verified reference snippets`;
+}
+
+// ---------- contract editing ----------
+function renderContract() {
+  const c = S.contract; if (!c) { $("contractCard").hidden = true; return; }
+  $("contractCard").hidden = false;
+  const params = c.parameters.map(p => `${p.name}: ${p.type}`).join(", ");
+  $("sig").textContent = `def ${c.function_name}(${params}) -> ${c.return_type}`;
+  $("reqs").innerHTML = c.requirements.map((r, i) =>
+    `<div class="req-row"><div class="req-id">R${i + 1}</div><textarea data-i="${i}" rows="1">${esc(r.text)}</textarea><button class="x" data-del="${i}" title="Remove">×</button></div>`).join("");
+  $("reqs").querySelectorAll("textarea").forEach(t => t.oninput = () => { S.contract.requirements[t.dataset.i].text = t.value; });
+  $("reqs").querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.contract.requirements.splice(+b.dataset.del, 1); renumber(); renderContract(); });
+  $("assumptions").value = c.assumptions.join("\n");
+  const qs = c.clarification_questions;
+  $("questions").innerHTML = qs.length ? `<div class="q"><b>The model needs your decision. Each answer changes the behaviour:</b>` +
+    mcqHtml(qs, "c") + `</div>` : "";
+  wireMcq($("questions"));
+  $("refine").hidden = !qs.length;
+  $("refine").className = "primary";
+  $("confirm").textContent = qs.length ? "Proceed with assumptions" : "Confirm & generate";
+  $("confirm").className = qs.length ? "ghost" : "primary";
+  $("cstate").textContent = qs.length ? "needs clarification" : "ready to confirm";
+}
+function renumber() { S.contract.requirements = S.contract.requirements.map((r, i) => ({ id: "R" + (i + 1), text: r.text })); }
+$("addreq").onclick = () => { S.contract.requirements.push({ id: "", text: "" }); renumber(); renderContract(); };
+$("assumptions").oninput = () => { if (S.contract) S.contract.assumptions = $("assumptions").value.split("\n").map(s => s.trim()).filter(Boolean); };
+
+async function analyze(answers) {
+  const requirement = $("req").value.trim();
+  if (!requirement) { $("req").focus(); return; }
+  if (S.busy) return;
+  const keep = S.tab; S = fresh(); S.tab = keep; S.busy = true;
+  banner(""); $("statusbar").hidden = true; renderSteps(); renderPanel(); renderContract();
+  $("analyze").disabled = true; $("refine").disabled = true;
+  setStep("contract", "running", answers ? "Updating contract with your answers…" : "Interpreting requirement…");
+  try {
+    const res = await fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requirement, provider: $("provider").value, model: $("model").value, function_name: $("fname").value,
+        examples: $("examples").value, answers }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    S.contract = data.contract; S.analysis = data;
+    const q = data.contract.clarification_questions.length;
+    setStep("contract", q ? "warn" : "done", `${data.contract.requirements.length} requirements · ${data.contract.assumptions.length} assumptions` +
+      (q ? ` · ${q} question(s) need you` : "") + ` · ${data.latency_s}s`);
+    renderContract();
+  } catch (e) { setStep("contract", "failed", String(e.message || e)); banner(esc(e.message || e) + ` <button class="ghost" onclick="analyze()">Retry</button>`); }
+  S.busy = false; $("analyze").disabled = false; $("refine").disabled = false;
+}
+$("analyze").onclick = () => analyze();
+$("refine").onclick = () => {
+  const answers = readAnswers(S.contract.clarification_questions, "c");
+  if (!answers.length) { toast("Pick an option for at least one question"); return; }
+  analyze(answers);
+};
+
+// ---------- multiple-choice clarification questions ----------
+function mcqHtml(qs, scope) {
+  return qs.map((q, i) => {
+    const name = `${scope}-q${i}`, hasOpts = q.options && q.options.length;
+    const opts = (q.options || []).map((o, j) => `<label class="opt"><input type="radio" name="${name}" value="${j}" ${q.recommended === j ? "checked" : ""}>
+      <span>${esc(o)}</span>${q.recommended === j ? `<span class="rec">recommended</span>` : ""}</label>`).join("");
+    const other = `<label class="opt"><input type="radio" name="${name}" value="other" ${hasOpts ? "" : "checked hidden"}>
+      <input type="text" data-other="${name}" placeholder="${hasOpts ? "Other: type your own answer" : "Your answer"}" aria-label="Other answer to ${esc(q.question)}"></label>`;
+    return `<fieldset class="mcq"><legend>${esc(q.id || "Q" + (i + 1))} · ${esc(q.question)}</legend>${q.why ? `<div class="why">${esc(q.why)}</div>` : ""}${opts}${other}</fieldset>`;
+  }).join("");
+}
+function wireMcq(root) {  // typing in "Other" selects it
+  root.querySelectorAll("[data-other]").forEach(t => t.addEventListener("input", () => {
+    const r = root.querySelector(`input[name="${t.dataset.other}"][value="other"]`); if (r) r.checked = true; }));
+}
+function readAnswers(qs, scope) {
+  return qs.map((q, i) => {
+    const name = `${scope}-q${i}`, sel = document.querySelector(`input[name="${name}"]:checked`);
+    if (!sel) return null;
+    const answer = sel.value === "other" ? (document.querySelector(`[data-other="${name}"]`).value || "").trim() : q.options[+sel.value];
+    return answer ? { question: q.question, answer } : null;
+  }).filter(Boolean);
+}
+$("req").addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") analyze(); });
+
+// ---------- generation ----------
+async function generate() {
+  if (S.busy || !S.contract) return;
+  const contract = JSON.parse(JSON.stringify(S.contract));
+  contract.requirements = contract.requirements.filter(r => r.text.trim());
+  if (!contract.requirements.length) { toast("Add at least one requirement"); return; }
+  await runStream("/api/generate", { contract });
+}
+
+// Shared SSE runner for generate / regress / revise: all produce a (new) run version.
+async function runStream(url, extra, skip = []) {
+  S.busy = true; $("confirm").disabled = true; $("analyze").disabled = true;
+  Object.assign(S, { cases: [], rejected: [], evidence: [], gen: null, val: null, result: null, examples: [], trace: [] });
+  banner(""); $("statusbar").hidden = true;
+  STEPS.slice(1).forEach(([id, , d]) => setStep(id, skip.includes(id) ? "done" : "", skip.includes(id) ? "Reused from the previous version" : d));
+  try {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...modelChoice(), max_repairs: +$("repairs").value, ...extra }) });
+    if (!res.ok || !res.body) { const d = await res.json().catch(() => ({})); throw new Error(d.error || res.statusText); }
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        if (chunk.startsWith("data: ")) handle(JSON.parse(chunk.slice(6)));
+      }
+    }
+  } catch (e) { handle({ type: "error", message: String(e) }); }
+  S.busy = false; $("confirm").disabled = false; $("analyze").disabled = false;
+}
+$("confirm").onclick = generate;
+
+function handle(ev) {
+  if (ev.type === "error") {
+    banner(esc(ev.message) + ` <button class="ghost" onclick="generate()">Retry</button>`);
+    STEPS.forEach(([id]) => { if ($("dot-" + id).classList.contains("running")) setStep(id, "failed"); });
+    return;
+  }
+  if (ev.type === "result") { showResult(ev); return; }
+  const d = ev.data || {};
+  if (ev.status === "running") {
+    const msg = { retrieve: "Searching library…", tests: "Designing test cases from the contract…", generate: "Writing implementation…",
+      validate: `Attempt ${d.attempt}: validating…`, repair: `Fixing from real failures:\n${d.feedback || ""}` }[ev.stage];
+    setStep(ev.stage, "running", msg);
+    if (ev.stage === "repair") S.trace.push({ title: `Repair after attempt ${d.attempt}: failure evidence sent to the model`, body: d.feedback });
+    return;
+  }
+  if (ev.stage === "retrieve") { S.examples = d.examples; setStep("retrieve", "done", `${d.examples.length} snippet(s) · ${d.mode}`); }
+  else if (ev.stage === "tests") {
+    S.cases = d.test_cases; S.rejected = d.rejected; S.evidence = d.evidence;
+    const tc = d.test_changes;
+    setStep("tests", d.test_cases.length ? "done" : "failed", `${d.test_cases.length} cases frozen · hash ${d.test_set_hash}` +
+      (d.test_designer?.independent ? `\nwritten by independent model: ${d.test_designer.model}` : "") +
+      (tc ? `\nkept ${tc.kept.length} · removed ${tc.removed.length} · added ${tc.added.length}` : "") +
+      (d.rejected.length ? ` · ${d.rejected.length} rejected` : ""));
+  } else if (ev.stage === "generate") { S.gen = d; setStep("generate", "done", "Implementation ready"); }
+  else if (ev.stage === "consensus") {
+    if (d.error) setStep("consensus", "warn", "Skipped: " + d.error);
+    else {
+      setStep("consensus", d.disputed.length ? "warn" : "done",
+        `${d.candidates.length} independent implementations → ${d.groups} behaviour group(s); chose ${d.selected} ` +
+        `(agreed by ${d.winning_group_size}) · ` + d.candidates.map(x => `${x.source}: ${x.counts.pass} pass`).join(", ") +
+        (d.disputed.length ? `\n${d.disputed.length} test(s) disputed: ${d.disputed.join(", ")} (both implementations disagree with them)` : ""));
+      S.trace.push({ title: "Cross-check", body: `${d.candidates.length} independent implementations, ${d.groups} behaviour group(s), chose ${d.selected}. Disputed tests: ${d.disputed.join(", ") || "none"}.` });
+    }
+  }
+  else if (ev.stage === "validate") {
+    S.val = d; S.evidence = d.evidence;
+    const c = d.counts, n = S.cases.length;
+    const msg = !d.syntax.ok ? d.syntax.error : d.status === "not_executed" ? "Not executed: " + (d.policy?.blocked?.join("; ") || "execution unavailable")
+      : `Attempt ${d.attempt}: ${c.pass}/${n} cases pass` + (d.load_error ? ` — ${d.load_error}` : "");
+    setStep("validate", d.status === "passed" ? "done" : d.status === "not_executed" ? "warn" : "failed", msg);
+    S.trace.push({ title: `Attempt ${d.attempt}: ${d.status.replace("_", " ")}`, body: msg });
+  } else if (ev.stage === "repair") {
+    if (ev.status === "done") S.gen = { ...S.gen, code: d.code };
+    else setStep("repair", "failed", d.error);
+  }
+  renderPanel();
+}
+
+function showResult(r) {
+  S.result = r; S.contract = r.contract; S.cases = r.test_cases; S.evidence = r.evidence; S.rejected = r.rejected_cases || [];
+  if (r.recorded) {
+    banner(`<b>Recorded run</b>, originally executed ${esc(r.created_at.replace("T", " "))} UTC with ${esc(r.provider)} / ${esc(r.model)}. This is a replay, not a new live generation.`, "rec");
+    renderSteps(); renderContract(); $("contractCard").hidden = true;
+  }
+  if (!r.repair_attempted) setStep("repair", r.status === "passed" ? "done" : "", r.status === "passed" ? "Not needed: passed on first attempt" : "Not attempted");
+  else setStep("repair", r.status === "passed" ? "done" : "failed", `${r.attempts.length - 1} repair(s), code only · frozen tests unchanged: ${r.tests_unchanged ? "yes" : "NO"} → ${r.status.replace("_", " ")}`);
+  const v = r.validation, c = v.counts, n = r.test_cases.length;
+  const evid = r.evidence.filter(e => e.outcome === "passed").length;
+  $("statusbar").hidden = false;
+  $("s-status").innerHTML = `<span class="${r.status === "passed" ? "good" : r.status === "failed" ? "bad" : "warn"}">${esc(r.status.replace("_", " "))}</span> <span class="badge">v${r.version || 1}</span>`;
+  $("s-syntax").innerHTML = v.syntax.ok ? `<span class="good">valid</span>` : `<span class="bad">error</span>`;
+  $("s-exec").innerHTML = v.execution_mode === "not_executed" ? `<span class="warn">not executed</span>` : esc(v.execution_mode === "docker" ? "container" : "process");
+  const nd = c.disputed || 0, eff = n - nd;
+  $("s-tests").innerHTML = v.execution_mode === "not_executed" ? `<span class="muted">0/${n} run</span>`
+    : `<span class="${c.pass === eff && eff ? "good" : "bad"}">${c.pass}/${eff} pass</span>` + (nd ? ` <span class="warn" style="font-size:13px">+${nd} disputed</span>` : "");
+  $("s-reqs").innerHTML = `<span class="${evid === r.evidence.length ? "good" : "warn"}">${evid}/${r.evidence.length}</span>`;
+  renderPanel();
+  if (!r.recorded) loadConfig();
+}
+
+// ---------- output tabs ----------
+function renderPanel() {
+  const p = $("panel"), r = S.result;
+  if (S.tab === "evidence") {
+    if (!S.evidence.length) { p.innerHTML = `<div class="empty">Each requirement will be linked to the test cases that check it, with the observed outcome.<br>Requirements without a test are shown as <b>not tested</b>.</div>`; return; }
+    p.innerHTML = versionNote(r) + `<div class="tablewrap"><table><tr><th>Requirement</th><th>Linked cases</th><th>Outcome</th></tr>` +
+      S.evidence.map(e => `<tr><td><b>${esc(e.requirement_id)}</b> ${esc(e.text)}</td><td class="mono">${esc(e.cases.join(", ") || "–")}</td><td>${pill(e.outcome)}</td></tr>`).join("") +
+      `</table></div>` + ((r?.validation?.counts?.disputed) ? `<div class="banner" style="margin-top:10px;border-color:var(--warn)"><b>${r.validation.counts.disputed} test(s) disputed.</b> Independently generated implementations agree with each other but not with these expected values, so the expectation may be wrong. They stay in the frozen set; check them in the Tests tab.</div>` : "") +
+      `<div class="sub" style="margin-top:10px">Tests are evidence for these specific cases, not a proof of general correctness. The model designed the expected values from the contract; review them.</div>` +
+      (r ? `<div class="toolbar" style="margin-top:12px;justify-content:flex-start">
+        <button class="ghost" onclick="location.href='/api/export/${esc(r.run_id || "")}'" ${r.run_id ? "" : "disabled"}>⬇ Download bundle (.zip)</button>
+        ${r.status === "passed" && !r.recorded ? `<button class="ghost" id="accept">👍 Add to library</button>` : ""}</div>` : "");
+    const a = $("accept"); if (a) a.onclick = accept;
+  } else if (S.tab === "code") {
+    const code = r ? r.code : S.gen?.code;
+    if (!code) { p.innerHTML = `<div class="empty">The implementation appears here after generation.</div>`; return; }
+    p.innerHTML = `<div class="toolbar">${r?.version_diff ? `<button class="ghost" data-view="version">Change vs v${r.version - 1}</button>` : ""}
+      ${r?.diff ? `<button class="ghost" data-view="repair">Repair diff</button>` : ""}<button class="ghost" data-view="code">Final code</button><button class="ghost" id="copy">Copy</button></div><div id="codebox">${hl(code)}</div>`;
+    $("copy").onclick = () => { navigator.clipboard.writeText(code); toast("Copied"); };
+    p.querySelectorAll("[data-view]").forEach(b => b.onclick = () => {
+      const v = b.dataset.view; $("codebox").innerHTML = v === "code" ? hl(code) : hl(v === "repair" ? r.diff : r.version_diff, "diff"); });
+  } else if (S.tab === "tests") {
+    if (!S.cases.length) { p.innerHTML = `<div class="empty">Test cases are designed from the confirmed contract and frozen before any code is written.</div>`; return; }
+    const res = Object.fromEntries((r ? r.validation.results : S.val?.results || []).map(x => [x.test_id, x]));
+    p.innerHTML = (S.rejected.length ? `<div class="banner">Rejected ${S.rejected.length} case(s): ${esc(S.rejected.join("; "))}</div>` : "") +
+      `<div class="tablewrap"><table><tr><th>Case</th><th>Req</th><th>Call</th><th>Expected</th><th>Actual</th><th>Status</th></tr>` +
+      S.cases.map(c => { const x = res[c.id];
+        const call = callText(c), exp = expText(c);
+        return `<tr><td class="mono">${esc(c.id)}${c.origin ? `<div class="badge">${esc(c.origin)}</div>` : ""}</td><td class="mono">${esc(c.requirement_ids.join(","))}</td><td class="mono">${esc(call)}<div class="sub">${esc(c.description)}</div></td>
+          <td class="mono">${esc(exp)}</td><td class="mono">${x ? (typeof x.actual === "string" ? esc(x.actual) : j(x.actual)) : "–"}${x?.bounded_error && x.status !== "pass" ? `<div class="sub">${esc(x.bounded_error)}</div>` : ""}</td>
+          <td>${x ? pill(x.status) : pill("not_executed")}</td></tr>`; }).join("") + `</table></div>`;
+  } else if (S.tab === "challenge") {
+    renderChallenge(p, r);
+  } else if (S.tab === "revise") {
+    renderRevise(p, r);
+  } else if (S.tab === "mutation") {
+    renderMutation(p, r);
+  } else if (S.tab === "explain") {
+    const c = S.contract; const g = r || S.gen;
+    if (!c) { p.innerHTML = `<div class="empty">Explanation, assumptions and sources appear here.</div>`; return; }
+    p.innerHTML = `${g?.explanation ? `<b>Explanation</b><p>${esc(g.explanation)}</p>` : ""}
+      <b>Assumptions</b><ul class="plain">${(c.assumptions.length ? c.assumptions : ["(none)"]).map(a => `<li>${esc(a)}</li>`).join("")}</ul>
+      ${g?.limitations ? `<b>Limitations</b><ul class="plain">${(g.limitations.length ? g.limitations : ["(none stated)"]).map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
+      <b>Library snippets used as style references</b><ul class="plain">${(S.examples.length ? S.examples : r?.examples || []).map(e => `<li>${esc(e.requirement)} <span class="badge">${esc(e.id)}</span> <span class="badge">score ${e.score}</span></li>`).join("") || "<li>(none)</li>"}</ul>
+      ${r?.test_designer ? `<b>Tests designed by</b><p>${esc(r.test_designer.provider)} / ${esc(r.test_designer.model)}${r.test_designer.independent ? " (independent of the code model)" : " (same model as the code)"}</p>` : ""}
+      ${r ? `<div class="sub">${esc(r.provider)} / ${esc(r.model)} · prompt v${esc(r.prompt_version)} · ${r.model_calls} model calls · ${r.latency_s}s · code ${esc(r.hashes.code)} · tests ${esc(r.hashes.test_set)}</div>` : ""}`;
+  } else if (S.tab === "trace") {
+    p.innerHTML = S.trace.length ? S.trace.map(t => `<div class="banner"><b>${esc(t.title)}</b><div class="step-detail" style="margin-top:6px">${esc(t.body)}</div></div>`).join("")
+      : r ? (r.attempts || []).map(a => `<div class="banner"><b>Attempt ${a.attempt}: ${esc(a.status.replace("_", " "))}</b> <span class="sub">${a.counts.pass} pass / ${a.counts.fail} fail / ${a.counts.error} error</span></div>`).join("")
+      : `<div class="empty">Validation attempts and repair feedback appear here.</div>`;
+  }
+}
+
+function modelChoice() {
+  return { provider: $("provider").value, model: $("model").value, test_provider: $("tprovider").value, test_model: $("tmodel").value };
+}
+function callText(c) {
+  return `${S.contract.function_name}(${[...c.args.map(a => JSON.stringify(a)), ...Object.entries(c.kwargs).map(([k, v]) => k + "=" + JSON.stringify(v))].join(", ")})`;
+}
+function expText(c) {
+  if (c.expected_exception) return `raises ${c.expected_exception}`;
+  if (c.property) return `${c.property} property`;
+  return JSON.stringify(c.expected) + (c.strict_type ? " (exact type)" : "");
+}
+function actualText(x) { return x ? (typeof x.actual === "string" ? x.actual : JSON.stringify(x.actual)) : "–"; }
+const post = async (url, body) => {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ run_id: S.result.run_id, ...modelChoice(), ...body }) });
+  const data = await res.json(); if (!res.ok) throw new Error(data.error || res.statusText); return data;
+};
+const needRun = (p) => { p.innerHTML = `<div class="empty">Generate a snippet first.</div>`; };
+
+function versionNote(r) {
+  if (!r || (r.version || 1) < 2) return "";
+  const tc = r.test_changes || {};
+  return `<div class="banner info"><b>v${r.version}</b>: ${esc(r.change || "")}<div class="sub">Tests kept ${tc.kept?.length || 0} · removed ${tc.removed?.length || 0} · added ${tc.added?.length || 0}` +
+    (r.regression ? ` · regression checks on unchanged behaviour: <b>${r.regression.pass}/${r.regression.total} pass</b>` : "") + `</div></div>`;
+}
+
+// ---------- 1. challenge ----------
+function renderChallenge(p, r) {
+  if (!r) return needRun(p);
+  const ch = r.challenge;
+  const can = r.validation.execution_mode !== "not_executed";
+  let html = `<p class="lead">An adversarial pass designs new edge cases from the <b>contract only</b> (it never sees the code): thresholds, invalid inputs, empty/unicode values and approved properties. They run in the same isolated runner. Up to 10 cases, 1 model call.</p>
+    <div class="toolbar" style="justify-content:flex-start"><button class="primary" id="chgo" ${can && !r.recorded ? "" : "disabled"}>⚡ Challenge this snippet</button></div>`;
+  if (!can) html += `<div class="banner">This version was not executed, so it can't be challenged.</div>`;
+  if (ch) {
+    const res = Object.fromEntries(ch.results.map(x => [x.test_id, x]));
+    html += ch.findings.length ? ch.findings.map(f => `<div class="banner find"><div class="big">Failure found: ${esc(callText(f.case))}</div>
+        Expected <b class="mono">${esc(expText(f.case))}</b> · Actual <b class="mono">${esc(actualText(f.result))}</b>
+        <div class="sub">${f.requirements.map(q => `${esc(q.id)}: ${esc(q.text)}`).join(" · ")}</div></div>`).join("")
+      : `<div class="banner info">No failures in ${ch.cases.length} challenge cases. That is evidence for these inputs, not proof of correctness.</div>`;
+    html += `<div class="tablewrap"><table><tr><th></th><th>Case</th><th>Req</th><th>Call</th><th>Expected</th><th>Actual</th><th>Status</th></tr>` +
+      ch.cases.map(c => { const x = res[c.id]; const bad = x && x.status !== "pass";
+        return `<tr><td><input type="checkbox" data-keep="${esc(c.id)}" ${bad ? "checked" : ""} aria-label="keep ${esc(c.id)}"></td><td class="mono">${esc(c.id)}</td><td class="mono">${esc(c.requirement_ids.join(","))}</td>
+          <td class="mono">${esc(callText(c))}<div class="sub">${esc(c.description)}</div></td><td class="mono">${esc(expText(c))}</td>
+          <td class="mono">${esc(actualText(x))}${x?.bounded_error && bad ? `<div class="sub">${esc(x.bounded_error)}</div>` : ""}</td><td>${pill(x ? x.status : "not_executed")}</td></tr>`; }).join("") + `</table></div>` +
+      (ch.rejected.length ? `<div class="sub" style="margin-top:8px">Skipped ${ch.rejected.length}: ${esc(ch.rejected.join("; "))}</div>` : "") +
+      `<div class="toolbar" style="justify-content:flex-start;margin-top:12px"><button class="ghost" id="keep" ${r.recorded ? "disabled" : ""}>Keep checked as regression tests → re-verify (new version)</button></div>
+       <div class="sub">Kept cases join the frozen test set. If they fail, the code is repaired (code only) and saved as v${(r.version || 1) + 1}. Review expected values first.</div>`;
+  }
+  p.innerHTML = html;
+  if ($("chgo")) $("chgo").onclick = async () => {
+    $("chgo").disabled = true; $("chgo").textContent = "Challenging…";
+    try { r.challenge = await post("/api/challenge", {}); } catch (e) { toast(String(e.message || e)); }
+    renderPanel();
+  };
+  if ($("keep")) $("keep").onclick = () => {
+    const ids = [...p.querySelectorAll("[data-keep]:checked")].map(b => b.dataset.keep);
+    if (!ids.length) { toast("Check at least one case"); return; }
+    runStream("/api/regress", { run_id: r.run_id, case_ids: ids }, ["retrieve", "generate"]);
+  };
+}
+
+// ---------- 2. revise ----------
+function renderRevise(p, r) {
+  if (!r) return needRun(p);
+  const pr = S.proposal;
+  let html = versionNote(r) + `<p class="lead">Change a requirement on this version. Tests for unchanged requirements are <b>kept</b> as regression checks; tests for changed requirements are replaced by new ones designed from the revised contract. You confirm the revised contract first.</p>
+    <textarea id="change" placeholder="e.g. Keep everything else, but make free shipping start at 750.">${esc(S.changeText || "")}</textarea>
+    <div class="toolbar" style="justify-content:flex-start;margin-top:8px"><button class="primary" id="propose" ${r.recorded ? "disabled" : ""}>Propose revised contract</button></div>`;
+  if (pr) {
+    html += `<div class="tablewrap"><table><tr><th>Req</th><th>Revised requirement</th><th>Change</th></tr>` +
+      pr.requirement_diff.map(d => `<tr><td class="mono">${esc(d.id)}</td><td>${esc(d.text)}${d.status === "modified" ? `<div class="sub">was: ${esc(d.before)}</div>` : ""}</td><td>${pill(d.status)}</td></tr>`).join("") + `</table></div>` +
+      (pr.contract.clarification_questions.length ? `<div class="q" id="rqs"><b>The model needs your decision on this change:</b>${mcqHtml(pr.contract.clarification_questions, "r")}
+        <div class="toolbar" style="justify-content:flex-start;margin-top:10px"><button class="primary" id="ranswer">Update proposal with answers</button></div></div>` : "") +
+      `<div class="toolbar" style="justify-content:flex-start;margin-top:12px"><button class="primary" id="apply">Confirm revision → regenerate v${(r.version || 1) + 1}</button><button class="ghost" id="discard">Discard</button></div>`;
+  }
+  p.innerHTML = html;
+  $("change").oninput = () => { S.changeText = $("change").value; };
+  $("propose").onclick = async () => {
+    const change = $("change").value.trim(); if (!change) { toast("Describe the change"); return; }
+    $("propose").disabled = true; $("propose").textContent = "Revising contract…";
+    S.changeBase = change;
+    try { S.proposal = await post("/api/revise/propose", { change }); } catch (e) { toast(String(e.message || e)); }
+    renderPanel();
+  };
+  if ($("rqs")) {
+    wireMcq($("rqs"));
+    $("ranswer").onclick = async () => {
+      const answers = readAnswers(S.proposal.contract.clarification_questions, "r");
+      if (!answers.length) { toast("Pick an option for at least one question"); return; }
+      $("ranswer").disabled = true; $("ranswer").textContent = "Updating…";
+      try { S.proposal = await post("/api/revise/propose", { change: S.changeBase || $("change").value.trim(), answers }); }
+      catch (e) { toast(String(e.message || e)); }
+      renderPanel();
+    };
+  }
+  if ($("discard")) $("discard").onclick = () => { S.proposal = null; renderPanel(); };
+  if ($("apply")) $("apply").onclick = () => {
+    const prop = S.proposal; S.proposal = null; S.changeText = "";
+    runStream("/api/revise/apply", { run_id: r.run_id, contract: prop.contract, change: prop.change }, ["retrieve"]);
+  };
+}
+
+// ---------- 3. mutation ----------
+function renderMutation(p, r) {
+  if (!r) return needRun(p);
+  const mu = r.mutation;
+  let html = `<p class="lead">Do the frozen tests actually catch bugs? Up to 5 small deterministic code changes (boundary operators, thresholds, logic, arithmetic) are made to the passing code, and each mutant runs against the same frozen tests. No model calls.</p>
+    <div class="toolbar" style="justify-content:flex-start"><button class="primary" id="mugo" ${r.status === "passed" && !r.recorded ? "" : "disabled"}>🧬 Test the tests</button></div>`;
+  if (r.status !== "passed") html += `<div class="banner">Only available once the code passes its frozen tests.</div>`;
+  if (mu) {
+    const sm = mu.summary;
+    html += `<div class="banner ${sm.survived ? "find" : "info"}"><div class="${sm.survived ? "big" : ""}">Tests detected ${sm.detected} of ${mu.attempted} mutations${sm.error ? ` (${sm.error} could not run)` : ""}.</div>
+      ${sm.survived ? `<div class="sub">${sm.survived} survived. Review test coverage there. A survivor can also be a change that doesn't alter behaviour.</div>` : ""}</div>
+      <div class="tablewrap"><table><tr><th>Mutant</th><th>Change</th><th>Code</th><th>Outcome</th><th>Caught by</th></tr>` +
+      mu.mutants.map(m => `<tr><td class="mono">${esc(m.id)}</td><td>${esc(m.description)}<div class="sub">${esc(m.category)}</div></td>
+        <td class="mono">${esc(m.before)}<br>→ ${esc(m.after)}</td><td>${pill(m.outcome)}</td><td class="mono">${esc(m.detected_by.join(", ") || "–")}</td></tr>`).join("") + `</table></div>`;
+  }
+  p.innerHTML = html;
+  if ($("mugo")) $("mugo").onclick = async () => {
+    $("mugo").disabled = true; $("mugo").textContent = "Running mutants…";
+    try { r.mutation = await post("/api/mutate", {}); } catch (e) { toast(String(e.message || e)); }
+    renderPanel();
+  };
+}
+
+async function accept() {
+  const res = await (await fetch("/api/accept", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run_id: S.result.run_id }) })).json();
+  toast(res.ok ? `Added. Library now has ${res.kb_size} snippets` : res.error);
+  if (res.ok) $("kbinfo").textContent = `Library: ${res.kb_size} verified reference snippets`;
+}
+
+$("runs").onchange = async () => {
+  const id = $("runs").value; if (!id) return;
+  const r = await (await fetch("/api/runs/" + encodeURIComponent(id))).json();
+  r.run_id = id; S = fresh(); S.tab = "evidence";
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x.dataset.tab === "evidence"));
+  showResult(r); $("runs").value = "";
+};
+$("tabs").onclick = (e) => {
+  const b = e.target.closest(".tab"); if (!b) return;
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === b));
+  S.tab = b.dataset.tab; renderPanel();
+};
+renderSteps(); renderPanel(); loadConfig();
+</script>
+<!-- SnipForge presentation layer: independent of pipeline and API logic. -->
+<style id="workspace-design">
+:root { color-scheme:dark; --bg:#111111; --panel:#181818; --ink:#e6e6e6; --muted:#a0a0a0; --line:#303030; --accent:#dedede; --accent-ink:#161616; --ok:#c8d5cd; --warn:#d6b77a; --bad:#e68b8b; --chip:#252525; --code-bg:#101010; --surface:#141414; --primary:#e0e0e0; --primary-hover:#fff; --focus:#ffffff14; }
+:root[data-theme="light"] { color-scheme:light; --bg:#eeeeec; --panel:#fafaf9; --ink:#222; --muted:#666; --line:#d5d5d2; --accent:#333; --accent-ink:#fafafa; --ok:#384b40; --warn:#88621e; --bad:#b13b3b; --chip:#e7e7e4; --code-bg:#151515; --surface:#f2f2ef; --primary:#292929; --primary-hover:#444; --focus:#0000000d; }
+body, header, .card, .stat, .tabs, .settings-fields, .empty-symbol { transition:background-color .25s, border-color .25s, color .25s; }
+::selection { background:var(--focus); color:var(--ink); }
+* { scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+.theme-toggle { display:flex; align-items:center; gap:7px; min-height:34px; }
+.theme-toggle svg { width:15px; height:15px; }
+.brand-mark { box-shadow:0 0 0 1px var(--line); }
+.tab-indicator { position:absolute; height:2px; bottom:0; left:0; background:var(--accent); pointer-events:none; box-shadow:0 -2px 12px var(--focus); transition:transform .32s cubic-bezier(.22,1,.36,1),width .32s cubic-bezier(.22,1,.36,1); }
+.click-feedback { position:fixed; pointer-events:none; z-index:100; overflow:hidden; border-radius:6px; }
+.click-feedback span { position:absolute; display:block; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb,var(--accent) 40%,transparent),transparent 70%); }
+@media(max-width:480px) { header .spacer { display:none; } header select { margin-left:auto; max-width:135px; } .theme-toggle .theme-label { display:none; } button.theme-toggle { padding:8px; } }
+
+body { font-size:13px; -webkit-font-smoothing:antialiased; }
+header { padding:18px 36px; gap:18px; background:var(--bg); }
+.logo { display:flex; align-items:center; gap:9px; font-size:19px; letter-spacing:-.8px; }
+.logo span { color:var(--ink); }
+.brand-mark { display:grid; place-items:center; width:30px; height:30px; background:var(--accent); color:white; border-radius:7px; font:600 15px monospace; letter-spacing:-2px; padding-right:2px; }
+.header-description { border-left:1px solid var(--line); padding-left:18px; font-size:12px; }
+header > .badge { margin-left:auto; background:transparent; font-size:11px; }
+header > .badge::before { content:''; display:inline-block; width:6px; height:6px; background:currentColor; border-radius:50%; margin-right:7px; }
+header select { max-width:220px; background:transparent; font-size:12px; }
+.workspace-intro { max-width:1500px; margin:0 auto; padding:36px 36px 25px; display:flex; justify-content:space-between; align-items:end; gap:20px; }
+.eyebrow { font:500 10px "JetBrains Mono",monospace; text-transform:uppercase; letter-spacing:1.7px; color:var(--accent); margin-bottom:8px; }
+.workspace-intro h1 { font-size:29px; font-weight:500; letter-spacing:-1.2px; margin:0 0 7px; }
+.workspace-intro p { color:var(--muted); margin:0; }
+.workspace-guide { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:11px; white-space:nowrap; }
+.workspace-guide span:first-child { color:var(--accent); }
+.workspace-guide i { width:24px; height:1px; background:var(--line); }
+main > section { min-width:0; }
+main { padding:0 36px 36px; grid-template-columns:minmax(320px,390px) minmax(0,1fr); gap:24px; }
+.card { border-radius:9px; padding:22px; margin-bottom:18px; box-shadow:0 2px 8px #00000012; }
+.card h3 { color:var(--ink); text-transform:none; font-size:13px; letter-spacing:0; margin-bottom:16px; }
+main > section:first-child > .card:first-child h3::after { content:'01'; margin-left:auto; font:11px "JetBrains Mono",monospace; color:var(--muted); }
+#req { min-height:156px; line-height:1.7; background:var(--surface); padding:14px; }
+textarea, select, input[type=text], input[type=number] { border-radius:6px; transition:border-color .18s, background .18s, box-shadow .18s; }
+textarea:focus, input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--focus); }
+button:focus-visible, summary:focus-visible, a:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+button { transition:background .16s, border-color .16s, color .16s, transform .16s, box-shadow .16s; touch-action:manipulation; }
+button[aria-busy="true"]::before { content:""; display:inline-block; width:11px; height:11px; border:1.5px solid currentColor; border-right-color:transparent; border-radius:50%; margin-right:8px; animation:spin .7s linear infinite; }
+button:not(:disabled):active { transform:translateY(1px) scale(.98); }
+button.primary { background:var(--primary); color:var(--accent-ink); border-radius:6px; padding:11px 16px; font-size:12px; box-shadow:0 1px 2px #14291d15; }
+button.primary:hover:not(:disabled) { background:var(--primary-hover); box-shadow:0 3px 8px #14291d20; }
+button.ghost { border-radius:6px; font-size:12px; padding:8px 12px; }
+button.ghost:hover:not(:disabled) { background:var(--chip); }
+#analyze { width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; min-height:42px; }
+#analyze::after { content:'↵'; opacity:.7; font-size:16px; }
+.chips { gap:6px; margin:9px 0 16px; }
+.chip { border:1px solid var(--line); background:transparent; border-radius:5px; padding:5px 8px; color:var(--muted); font-size:10px; }
+.chip:hover { outline:none; border-color:var(--accent); background:var(--chip); }
+.example-label { margin:14px 0 0; color:var(--muted); font-size:10px; }
+details summary { font-size:11px; }
+.steps li { padding:11px 0; border-bottom:0; position:relative; grid-template-columns:20px 1fr; }
+.steps li:not(:last-child)::after { content:''; position:absolute; top:30px; left:6px; bottom:-11px; width:1px; background:var(--line); }
+.dot { position:relative; z-index:1; background:var(--panel); width:13px; height:13px; }
+.dot.done::after { content:'✓'; display:block; color:white; font-size:8px; line-height:9px; text-align:center; }
+.step-name { font-size:12px; font-weight:500; }
+.step-detail { font-size:11px; line-height:1.6; margin-top:2px; }
+.steps li:has(.running) .step-name { color:var(--accent); }
+#kbinfo { font-size:10px; padding:0 8px; }
+main > section:nth-child(2) > .card { min-height:570px; padding:0; overflow:hidden; }
+.output-heading { padding:20px 22px 16px; display:flex; justify-content:space-between; align-items:center; }
+.output-heading strong { font-weight:500; font-size:13px; }
+.output-heading span { font:10px "JetBrains Mono",monospace; color:var(--muted); }
+.tabs { position:relative; padding:0 16px; gap:0; margin:0; background:var(--surface); border-top:1px solid var(--line); }
+.tab { font-size:11px; padding:13px 10px; }
+.tab:hover { color:var(--ink); background:var(--chip); }
+.tab.active { color:var(--accent); border-bottom-color:transparent; background:var(--chip); }
+#panel { padding:22px; }
+.empty { padding:55px 20px; max-width:530px; margin:auto; font-size:12px; line-height:1.8; }
+.empty-symbol { display:grid; place-items:center; border:1px solid var(--line); width:54px; height:54px; border-radius:12px; margin:0 auto 22px; color:var(--accent); background:var(--bg); font:22px "JetBrains Mono",monospace; }
+.empty h2 { color:var(--ink); font-size:20px; letter-spacing:-.6px; font-weight:500; margin:0 0 10px; }
+.empty p { margin:0; }
+.empty-flow { display:flex; justify-content:center; gap:14px; align-items:center; margin:30px 0; font:10px "JetBrains Mono",monospace; color:var(--muted); }
+.empty-flow b { font-weight:400; border:1px solid var(--line); border-radius:5px; padding:7px 10px; }
+.empty-hint { padding-top:22px; border-top:1px solid var(--line); font-size:10px; }
+.stat { border-radius:7px; padding:13px 12px; }
+.stat .v { font-size:16px; font-weight:500; }
+.stat .k { font-size:10px; margin-top:4px; }
+th { font-size:10px; text-transform:uppercase; letter-spacing:.5px; padding:10px; background:var(--bg); }
+td { font-size:12px; padding:13px 10px; }
+tr:hover td { background:var(--surface); }
+.pill { font-size:10px; border-radius:4px; }
+pre { border-radius:6px; font-size:12px; }
+.toast { z-index:30; box-shadow:0 6px 30px #14291d20; transform:translate(-50%,10px); transition:opacity .2s, transform .2s; }
+.toast.show { transform:translate(-50%,0); }
+.settings-drawer { max-width:1428px; margin:0 auto; padding:0 0 16px; }
+.settings-drawer summary { margin:0; padding:12px 16px; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--ink); }
+.settings-fields { display:flex; align-items:end; flex-wrap:wrap; gap:16px; padding:16px; background:var(--panel); border:1px solid var(--line); border-top:0; }
+.settings-fields .field { margin:0; flex:1; min-width:160px; font-size:11px; }
+.settings-fields input { width:100% !important; }
+.settings-drawer:not([open]) { padding-bottom:0; }
+.settings-drawer:not([open]) summary { border:0; background:transparent; padding:0; }
+.settings-wrap { max-width:1500px; padding:0 36px 20px; margin:auto; }
+@keyframes reveal { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+@keyframes state-in { from { box-shadow:0 0 0 5px var(--focus); } to { box-shadow:0 0 0 0 transparent; } }
+#contractCard:not([hidden]), #statusbar:not([hidden]), .banner, .q { animation:reveal .28s ease-out; }
+.dot.done, .dot.failed { animation:state-in .45s ease-out; }
+@media(min-width:1500px) { .workspace-intro { padding-top:44px; } }
+@media(max-width:1100px) { header { padding:16px 24px; } .header-description { display:none; } .workspace-guide { display:none; } main { padding:0 24px 24px; gap:18px; grid-template-columns:minmax(300px,350px) minmax(0,1fr); } .workspace-intro { padding:28px 24px 22px; } .settings-wrap { padding:0 24px 18px; } }
+@media(max-width:850px) { main { grid-template-columns:1fr; } main > section:nth-child(2) > .card { min-height:420px; } header > .badge { display:none; } header { gap:10px; } header select { max-width:170px; } .workspace-intro h1 { font-size:26px; } }
+@media(max-width:480px) { header { padding:14px 16px; } main { padding:0 14px 20px; } .workspace-intro { padding:24px 16px 18px; } .settings-wrap { padding:0 16px 18px; } .card { padding:18px; } #panel { padding:16px; } .empty { padding:32px 4px; } .empty-flow { gap:7px; } .empty-flow b { padding:6px; } .statusbar { gap:7px; } }
+@media(prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+
+/* Compact, neutral workbench. Color is reserved for meaningful outcomes. */
+header { padding:12px 24px; gap:14px; }
+.logo { font-size:15px; letter-spacing:-.4px; }
+.brand-mark { width:25px; height:25px; background:transparent; border:1px solid var(--line); color:var(--ink); border-radius:3px; box-shadow:none; }
+.workspace-intro { padding:18px 24px; align-items:center; }
+.workspace-path { color:var(--ink); font-size:12px; }
+.workspace-path span { color:var(--muted); padding:0 12px; }
+.settings-wrap { padding:0 24px 16px; }
+main { padding:0 24px 24px; gap:16px; grid-template-columns:minmax(300px,350px) minmax(0,1fr); }
+.card, .stat { border-radius:4px; box-shadow:none; }
+.card { padding:18px; }
+.card h3 { font-size:12px; }
+button.primary, button.ghost, textarea, .chip, .pill { border-radius:3px; box-shadow:none; }
+button.primary:hover:not(:disabled) { box-shadow:none; }
+button:not(:disabled):active { transform:translateY(1px); }
+.tab-indicator { box-shadow:none; height:1px; }
+.tabs { padding:0 10px; }
+.tab { font-size:12px; padding:12px 13px; font-weight:400; }
+.tab.active { background:transparent; }
+.output-heading { padding:15px 18px; }
+#panel { padding:18px; }
+.empty-symbol, .empty-flow { display:none; }
+.empty { text-align:left; margin:0; padding:28px 8px; max-width:520px; }
+.empty h2 { font-size:15px; font-weight:500; letter-spacing:0; }
+.empty-hint { margin-top:28px; }
+.text-reveal-word { display:inline-block; max-width:100%; overflow-wrap:anywhere; vertical-align:baseline; }
+@media(max-width:1000px) { main { grid-template-columns:minmax(280px,320px) minmax(0,1fr); } }
+@media(max-width:850px) { main { grid-template-columns:1fr; } }
+@media(max-width:480px) { header { padding:12px 14px; } main { padding:0 12px 20px; } .workspace-intro { padding:16px 14px; } .workspace-intro > .sub { display:none; } .settings-wrap { padding:0 14px 16px; } #panel { padding:12px; } }
+
+
+</style>
+<script id="workspace-interactions">
+(() => {
+  const byId = id => document.getElementById(id);
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) document.getAnimations().forEach(animation => animation.cancel());
+  });
+  const animate = (el, frames, duration = 320) => {
+    if (!el || reducedMotion.matches) return;
+    el.getAnimations().forEach(a => a.cancel());
+    el.animate(frames, { duration, easing:'ease-out' });
+  };
+  const header = document.querySelector('header');
+  const themeButton = document.createElement('button');
+  themeButton.className = 'ghost theme-toggle';
+  themeButton.type = 'button';
+  const sun = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>';
+  const moon = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 15.4A8.5 8.5 0 0 1 8.6 4a8.5 8.5 0 1 0 11.4 11.4Z"/></svg>';
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    const dark = theme === 'dark';
+    themeButton.innerHTML = (dark ? sun : moon) + '<span class="theme-label">' + (dark ? 'Light' : 'Dark') + '</span>';
+    themeButton.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    themeButton.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    try { localStorage.setItem('snipforge-theme',theme); } catch (_) {}
+  }
+  let savedTheme = 'dark';
+  try { savedTheme = localStorage.getItem('snipforge-theme') === 'light' ? 'light' : 'dark'; } catch (_) {}
+  setTheme(savedTheme);
+  themeButton.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+  header.append(themeButton);
+  header.querySelector('.logo').innerHTML = '<b class="brand-mark" aria-hidden="true">/›</b><span>SnipForge</span>';
+  header.querySelector('.sub').classList.add('header-description');
+  header.querySelector('.sub').textContent = 'Local workspace';
+  const intro = document.createElement('div');
+  intro.className = 'workspace-intro';
+  intro.innerHTML = '<div class="workspace-path mono">workspace <span>/</span> untitled.py</div><span class="sub">Python · Function workbench</span>';
+  header.after(intro);
+  const settings = document.createElement('div');
+  settings.className = 'settings-wrap';
+  settings.innerHTML = '<details class="settings-drawer"><summary>Model settings <span class="muted">· Code & independent tests</span></summary><div class="settings-fields"></div></details>';
+  intro.after(settings);
+  const fields = settings.querySelector('.settings-fields');
+  header.querySelector('label[for="tprovider"]').remove();
+  [['provider','Code provider'],['model','Code model'],['tprovider','Test provider'],['tmodel','Test model']].forEach(([id, title]) => {
+    const label = document.createElement('label'); label.className = 'field'; label.textContent = title;
+    label.append(byId(id)); fields.append(label);
+    if (id === 'tmodel') {
+      const sync = () => { label.hidden = byId(id).hidden; };
+      new MutationObserver(sync).observe(byId(id), { attributes:true, attributeFilter:['hidden'] }); sync();
+    }
+  });
+  document.querySelector('main > section:first-child h3').textContent = 'Requirement';
+  byId('req').setAttribute('aria-label','Describe your function');
+  byId('req').placeholder = 'What should your function do?\nInclude inputs, expected output, and edge cases…';
+  byId('analyze').textContent = 'Analyze requirement';
+  byId('analyze').title = 'Analyze requirement (⌘ Enter / Ctrl Enter)';
+  const exampleLabel = document.createElement('p'); exampleLabel.className = 'example-label'; exampleLabel.textContent = 'START WITH AN EXAMPLE';
+  byId('demos').before(exampleLabel);
+  const heading = document.createElement('div'); heading.className = 'output-heading';
+  heading.innerHTML = '<strong>Output</strong><span>READ · TEST · ITERATE</span>';
+  byId('tabs').before(heading);
+  const tabLabels = { evidence:'Evidence', code:'Code', tests:'Tests', challenge:'Challenge', revise:'Revise', mutation:'Test the tests', explain:'Explanation', trace:'Trace' };
+  byId('tabs').setAttribute('role','tablist');
+  byId('tabs').setAttribute('aria-label','Inspect generated function');
+  byId('panel').setAttribute('role','tabpanel');
+  byId('toast').setAttribute('role','status');
+  byId('banner').setAttribute('role','alert');
+  const tabs = [...document.querySelectorAll('.tab')];
+  const indicator = document.createElement('span');
+  indicator.className = 'tab-indicator'; indicator.setAttribute('aria-hidden','true');
+  byId('tabs').append(indicator);
+  const moveIndicator = () => {
+    const active = tabs.find(tab => tab.classList.contains('active'));
+    if (!active) return;
+    indicator.style.width = active.offsetWidth + 'px';
+    indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+  };
+  new ResizeObserver(moveIndicator).observe(byId('tabs'));
+  if (document.fonts) document.fonts.ready.then(moveIndicator);
+  const syncTabs = () => { moveIndicator(); tabs.forEach(tab => {
+    const active = tab.classList.contains('active');
+    tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1;
+    if (active) byId('panel').setAttribute('aria-labelledby',tab.id);
+  }); };
+  tabs.forEach(tab => {
+    tab.textContent = tabLabels[tab.dataset.tab] || tab.textContent;
+    tab.id = 'tab-' + tab.dataset.tab; tab.setAttribute('role','tab'); tab.setAttribute('aria-controls','panel');
+    new MutationObserver(syncTabs).observe(tab, { attributes:true, attributeFilter:['class'] });
+  }); syncTabs();
+  byId('tabs').addEventListener('keydown', e => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+    e.preventDefault(); let i = tabs.indexOf(document.activeElement);
+    i = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[i].focus(); tabs[i].click(); tabs[i].scrollIntoView({block:'nearest',inline:'nearest'});
+  });
+
+  // Reveal real text without changing its content, handlers, or accessible names.
+  // Code keeps its syntax-highlighted DOM and exact whitespace intact.
+  function revealText(root) {
+    if (!root || reducedMotion.matches || !root.getClientRects().length) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.textContent.trim() || node.parentElement.closest('pre,code,textarea,input,select,option,svg,[aria-hidden="true"],.text-reveal-word')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      const fragment = document.createDocumentFragment();
+      for (const token of node.textContent.split(/(\s+)/)) {
+        if (!token) continue;
+        if (/^\s+$/.test(token)) fragment.append(document.createTextNode(token));
+        else {
+          const word = document.createElement('span'); word.className = 'text-reveal-word'; word.textContent = token;
+          fragment.append(word);
+        }
+      }
+      node.replaceWith(fragment);
+    }
+    root.querySelectorAll('.text-reveal-word').forEach((word,index) => {
+      word.getAnimations().forEach(animation => animation.cancel());
+      word.animate([
+        {opacity:0,transform:'translateY(8px)',filter:'blur(3px)'},
+        {opacity:1,transform:'translateY(0)',filter:'blur(0)'}
+      ], {duration:480,delay:Math.min(index*18,320),easing:'cubic-bezier(.2,.7,.2,1)',fill:'backwards'});
+    });
+    root.querySelectorAll('pre').forEach(pre => {
+      pre.getAnimations().forEach(animation => animation.cancel());
+      pre.animate([{clipPath:'inset(0 100% 0 0)',opacity:.3},{clipPath:'inset(0 0 0 0)',opacity:1}], {duration:650,easing:'cubic-bezier(.2,.7,.2,1)'});
+    });
+  }
+
+  const decoratePanel = () => {
+    const empty = byId('panel').querySelector('.empty');
+    if (empty && !empty.dataset.enhanced) {
+      empty.dataset.enhanced = 'true';
+      const original = empty.innerHTML;
+      const tab = document.querySelector('.tab.active')?.dataset.tab;
+      const titles = { evidence:'No results yet', code:'No implementation yet', tests:'No test suite loaded', challenge:'Challenge cases', revise:'Revise contract', mutation:'Mutation checks', explain:'Implementation notes', trace:'Execution trace' };
+      empty.innerHTML = '<div class="empty-symbol" aria-hidden="true">'+(tab === 'code' ? '{ }' : '✓')+'</div><h2>'+titles[tab]+'</h2><p>'+original+'</p>'+(tab === 'evidence' ? '<div class="empty-flow"><b>Requirement</b><span>→</span><b>Code</b><span>→</span><b>Evidence</b></div><div class="empty-hint">Start with a requirement on the left, or try an example.</div>' : '');
+    }
+  };
+  const motionRoots = ['panel','contractCard','steps','statusbar','banner'].map(byId).filter(Boolean);
+  const observeMotion = () => motionRoots.forEach(root => textObserver.observe(root, {
+    childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['hidden']
+  }));
+  const textObserver = new MutationObserver(changes => {
+    textObserver.disconnect();
+    const roots = new Set();
+    changes.forEach(change => {
+      const node = change.target.nodeType === Node.TEXT_NODE ? change.target.parentElement : change.target;
+      const root = motionRoots.find(root => root === node || root.contains(node));
+      if (root) roots.add(root === byId('steps') ? node.closest('li') || root : root);
+    });
+    if (roots.has(byId('panel'))) decoratePanel();
+    roots.forEach(revealText);
+    observeMotion();
+  });
+  decoratePanel(); revealText(byId('panel')); observeMotion();
+  document.addEventListener('input', e => {
+    if (e.target.matches('textarea,input[type=text],input[type=number]'))
+      animate(e.target,[{borderColor:'var(--accent)'},{borderColor:'var(--line)'}],280);
+  });
+  document.addEventListener('change', e => {
+    if (e.target.matches('select,input[type=checkbox]')) animate(e.target,[{opacity:.55},{opacity:1}]);
+  });
+  document.addEventListener('toggle', event => {
+    const details = event.target;
+    if (details.tagName !== 'DETAILS' || !details.open) return;
+    textObserver.disconnect();
+    [...details.children].filter(el => el.tagName !== 'SUMMARY').forEach(revealText);
+    observeMotion();
+  }, true);
+  // Button labels and disabled states are owned by the existing workflow.
+  // Reflect asynchronous states without replacing any action handlers.
+  const busyLabels = /analyzing|designing|running|revising|generating|loading/i;
+  const reflectBusy = root => root.querySelectorAll('button').forEach(button => {
+    const busy = button.disabled && busyLabels.test(button.textContent);
+    if (button.getAttribute('aria-busy') !== String(busy)) button.setAttribute('aria-busy',String(busy));
+  });
+  new MutationObserver(() => reflectBusy(document)).observe(document.querySelector('main'), {subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['disabled']});
+})();
+</script>
+
+</body>
+</html>
