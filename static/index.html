@@ -153,7 +153,7 @@ ul.plain { margin: 4px 0 12px; padding-left: 18px; }
       <div class="sub" style="margin-bottom:6px">Requirements (editable; each gets its own tests)</div>
       <div id="reqs"></div>
       <button class="ghost" id="addreq" style="margin-top:2px">+ Add requirement</button>
-      <label class="field">Assumptions (one per line)<textarea id="assumptions" rows="3"></textarea></label>
+      <label class="field"><span>Assumptions (one per line)</span><textarea id="assumptions" rows="3"></textarea></label>
       <div id="questions"></div>
       <div class="row">
         <label class="sub">Max repairs <input id="repairs" type="number" min="0" max="3" value="1" style="width:56px"></label>
@@ -1000,6 +1000,30 @@ body.is-busy .busy-bar { opacity:1; }
 .mcq .opt:has(input:checked) { transform:translateX(3px); }
 .mcq .opt .rec { animation:pill-pop .4s cubic-bezier(.34,1.56,.64,1) both .25s; }
 
+/* Fit-to-screen workbench: on laptop/desktop screens the page never scrolls. The left column scrolls by itself;
+   on the right, status and tabs stay put and only the output panel scrolls. Phones keep normal page scroll. */
+@media (min-width: 851px) and (min-height: 560px) {
+  html, body { height:100%; }
+  body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+  header, .workspace-intro, .settings-wrap { flex:none; }
+  /* auto margins stop flex children from stretching: give the centred rows an explicit width */
+  .workspace-intro, .settings-wrap, main { width:100%; box-sizing:border-box; }
+  .workspace-intro { padding-top:8px; padding-bottom:8px; }
+  .settings-wrap { padding-bottom:10px; }
+  main { flex:1; min-height:0; width:100%; box-sizing:border-box; }
+  main > section { min-height:0; }
+  main > section:first-child { overflow-y:auto; overscroll-behavior:contain; padding-right:6px; scroll-behavior:smooth; }
+  main > section:nth-child(2) { display:flex; flex-direction:column; overflow:hidden; }
+  main > section:nth-child(2) > #banner, main > section:nth-child(2) > .statusbar { flex:none; }
+  main > section:nth-child(2) > .card { flex:1; min-height:0 !important; display:flex; flex-direction:column; margin-bottom:0; }
+  .output-heading, .tabs { flex:none; }
+  #panel { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+  #panel pre { max-height:none; }
+  .statusbar { margin-bottom:10px; }
+  .stat { padding:9px 12px; }
+  #banner .banner { max-height:30vh; overflow-y:auto; }
+}
+
 /* Panel content crossfades on tab switch. */
 #panel.tab-swap { animation:panel-in .26s ease-out; }
 @keyframes panel-in { from { opacity:.25; transform:translateY(4px); } to { opacity:1; transform:none; } }
@@ -1034,6 +1058,20 @@ body.is-busy .busy-bar { opacity:1; }
     new MutationObserver(m => { if (m.some(x => x.type === 'childList')) stagger(el); })
       .observe(el, { childList:true, subtree:true });
   });
+
+  // Bring the contract into view after Analyze (left column scrolls by itself on desktop),
+  // and reset the output panel to the top whenever its content is replaced by a new run or tab.
+  const contract = byId('contractCard');
+  const leftCol = document.querySelector('main > section:first-child');
+  const showContract = () => setTimeout(() => {
+    if (contract.hidden || !leftCol) return;
+    if (leftCol.scrollHeight > leftCol.clientHeight + 1)  // desktop: the column scrolls by itself (CSS smooths it)
+      leftCol.scrollTop += contract.getBoundingClientRect().top - leftCol.getBoundingClientRect().top - 8;
+    else contract.scrollIntoView({ block:'start', behavior: reduced.matches ? 'auto' : 'smooth' });
+  }, 150);
+  if (contract) new MutationObserver(showContract).observe(contract, { attributes:true, attributeFilter:['hidden'] });
+  byId('refine')?.addEventListener('click', () => setTimeout(showContract, 1500));
+  byId('tabs')?.addEventListener('click', () => { const p = byId('panel'); if (p) p.scrollTop = 0; });
 
   // Crossfade on tab switch.
   byId('tabs')?.addEventListener('click', e => {
