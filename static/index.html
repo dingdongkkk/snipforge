@@ -959,5 +959,97 @@ button:not(:disabled):active { transform:translateY(1px); }
 })();
 </script>
 
+<style id="motion-layer">
+/* Motion with meaning: progress, ordering of evidence, and outcomes. Disabled by prefers-reduced-motion above. */
+.busy-bar { position:fixed; top:0; left:0; right:0; height:2px; z-index:200; overflow:hidden; opacity:0; transition:opacity .25s; pointer-events:none; }
+.busy-bar::before { content:''; position:absolute; inset:0; width:40%; background:linear-gradient(90deg,transparent,var(--accent),transparent); animation:busy-slide 1.1s cubic-bezier(.4,0,.2,1) infinite; }
+body.is-busy .busy-bar { opacity:1; }
+@keyframes busy-slide { from { transform:translateX(-100%); } to { transform:translateX(260%); } }
+
+/* Pipeline timeline: connectors fill as stages complete; the running stage breathes. */
+.steps li:not(:last-child)::after { background:linear-gradient(var(--ok),var(--ok)) top/100% 0% no-repeat, var(--line); transition:background-size .6s cubic-bezier(.22,1,.36,1); }
+.steps li:has(.dot.done):not(:last-child)::after { background-size:100% 100%, auto; }
+.dot.running { box-shadow:0 0 0 0 var(--focus); animation:spin .8s linear infinite, breathe 1.4s ease-in-out infinite; }
+@keyframes breathe { 0%,100% { box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 35%,transparent); } 50% { box-shadow:0 0 0 6px transparent; } }
+.steps li:has(.dot.running) .step-detail { background:linear-gradient(90deg,var(--muted) 40%,var(--ink) 50%,var(--muted) 60%) 0/250% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent; animation:text-sheen 1.6s linear infinite; }
+@keyframes text-sheen { from { background-position:100% 0; } to { background-position:0 0; } }
+
+/* Tables: rows cascade in, outcome pills land in order like a checklist being ticked. */
+#panel tr.row-in { animation:row-in .38s cubic-bezier(.2,.7,.2,1) both; animation-delay:calc(var(--i,0) * 55ms); }
+#panel tr.row-in .pill { animation:pill-pop .42s cubic-bezier(.34,1.56,.64,1) both; animation-delay:calc(var(--i,0) * 55ms + 220ms); }
+@keyframes row-in { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:none; } }
+@keyframes pill-pop { 0% { opacity:0; transform:scale(.5); } 70% { opacity:1; transform:scale(1.12); } 100% { transform:scale(1); } }
+
+/* Status cards stagger in; a passing result glows once. */
+#statusbar:not([hidden]) .stat { animation:reveal .35s ease-out both; }
+#statusbar .stat:nth-child(2) { animation-delay:.05s; } #statusbar .stat:nth-child(3) { animation-delay:.1s; }
+#statusbar .stat:nth-child(4) { animation-delay:.15s; } #statusbar .stat:nth-child(5) { animation-delay:.2s; }
+.stat.celebrate { animation:reveal .35s ease-out both, win-glow 1.6s ease-out .3s; }
+@keyframes win-glow { 0% { box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent); } 100% { box-shadow:0 0 0 14px transparent; } }
+
+/* Findings demand attention once; diff lines flash where the change is. */
+.banner.find { animation:reveal .28s ease-out, alert-ring 1s ease-out 2; }
+@keyframes alert-ring { 0% { box-shadow:0 0 0 0 color-mix(in srgb,var(--bad) 45%,transparent); } 100% { box-shadow:0 0 0 10px transparent; } }
+.hljs-addition { background:color-mix(in srgb,var(--ok) 16%,transparent); animation:line-flash 1.4s ease-out; }
+.hljs-deletion { background:color-mix(in srgb,var(--bad) 14%,transparent); animation:line-flash 1.4s ease-out; }
+@keyframes line-flash { from { filter:brightness(1.9); } to { filter:none; } }
+
+/* Multiple-choice options stagger in; the chosen option slides into place. */
+.mcq .opt { animation:reveal .3s ease-out both; animation-delay:calc(var(--j,0) * 45ms); transition:border-color .18s, background .18s, transform .18s; }
+.mcq .opt:has(input:checked) { transform:translateX(3px); }
+.mcq .opt .rec { animation:pill-pop .4s cubic-bezier(.34,1.56,.64,1) both .25s; }
+
+/* Panel content crossfades on tab switch. */
+#panel.tab-swap { animation:panel-in .26s ease-out; }
+@keyframes panel-in { from { opacity:.25; transform:translateY(4px); } to { opacity:1; transform:none; } }
+</style>
+<script id="motion-layer-js">
+(() => {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const byId = id => document.getElementById(id);
+  const bar = document.createElement('div'); bar.className = 'busy-bar'; bar.setAttribute('aria-hidden', 'true');
+  document.body.prepend(bar);
+
+  // Busy = the workflow disabled its main buttons, or an action button shows a "…" progress label.
+  const syncBusy = () => {
+    const busy = byId('analyze')?.disabled || byId('confirm')?.disabled ||
+      [...document.querySelectorAll('main button:disabled')].some(b => /…$/.test(b.textContent.trim()));
+    document.body.classList.toggle('is-busy', !!busy);
+  };
+  new MutationObserver(syncBusy).observe(document.querySelector('main'),
+    { subtree:true, attributes:true, attributeFilter:['disabled'], childList:true, characterData:true });
+
+  // Stagger table rows / MCQ options whenever the panel or questions re-render (class/style only: no text changes).
+  const stagger = root => {
+    if (!root || reduced.matches) return;
+    root.querySelectorAll('table').forEach(t => [...t.querySelectorAll('tr')].slice(1).forEach((tr, i) => {
+      if (tr.classList.contains('row-in')) return;
+      tr.style.setProperty('--i', Math.min(i, 14)); tr.classList.add('row-in');
+    }));
+    root.querySelectorAll('.mcq').forEach(f => [...f.querySelectorAll('.opt')].forEach((o, j) => o.style.setProperty('--j', j)));
+  };
+  ['panel', 'questions'].forEach(id => {
+    const el = byId(id); if (!el) return;
+    new MutationObserver(m => { if (m.some(x => x.type === 'childList')) stagger(el); })
+      .observe(el, { childList:true, subtree:true });
+  });
+
+  // Crossfade on tab switch.
+  byId('tabs')?.addEventListener('click', e => {
+    if (!e.target.closest('.tab') || reduced.matches) return;
+    const p = byId('panel'); p.classList.remove('tab-swap'); void p.offsetWidth; p.classList.add('tab-swap');
+  });
+
+  // Glow once when a run passes.
+  const status = byId('s-status');
+  if (status) new MutationObserver(() => {
+    const card = status.closest('.stat'); if (!card) return;
+    card.classList.remove('celebrate');
+    if (/passed/.test(status.textContent) && !reduced.matches) { void card.offsetWidth; card.classList.add('celebrate'); }
+  }).observe(status, { childList:true, subtree:true, characterData:true });
+})();
+</script>
+
 </body>
 </html>
