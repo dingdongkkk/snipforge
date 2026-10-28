@@ -11,7 +11,8 @@ from pathlib import Path
 from snipforge import evolve, pipeline, reporting
 from snipforge.mutation import mutation_test
 from snipforge.config import DEFAULT_PROVIDER, MAX_REPAIRS, TEST_MODEL, TEST_PROVIDER, public_providers
-from snipforge.runner import execution_mode
+from snipforge.runner import execution_mode, run_once
+from snipforge.validator import check_syntax, policy_check
 
 STATIC = Path(__file__).parent / "static"
 DEMOS = [
@@ -142,6 +143,8 @@ class Handler(BaseHTTPRequestHandler):
                                                    max_repairs=self._repairs(body)))
             return self._stream(evolve.run_revision(run, run_id, body.get("contract") or {}, body.get("change", ""),
                                                     provider, model, max_repairs=self._repairs(body), **tests))
+        if self.path in ("/api/run", "/api/run-tests"):
+            return self._playground(body)
         if self.path == "/api/accept":
             run = reporting.load_run(body.get("run_id", ""))
             if not run or run["status"] != "passed":
@@ -152,6 +155,30 @@ class Handler(BaseHTTPRequestHandler):
                    "code": run["code"], "tests": reporting.pytest_file(run)})
             return self._json({"ok": True, "kb_size": len(r.items)})
         self._json({"error": "not found"}, 404)
+
+    def _playground(self, body: dict):
+        """Instant execution of (possibly edited) code: no model calls, same isolated runner."""
+        run = reporting.load_run(body.get("run_id", ""), replay=False)
+        if not run:
+            return self._json({"error": "run not found"}, 404)
+        code = body.get("code") or run["code"]
+        if len(code) > 100_000:
+            return self._json({"error": "code too large"}, 400)
+        syntax = check_syntax(code)
+        if not syntax["ok"]:
+            return self._json({"ok": False, "kind": "syntax", "message": syntax["error"], "text": syntax.get("text", "")})
+        policy = policy_check(code, run["contract"])
+        if policy["status"] == "fail":
+            return self._json({"ok": False, "kind": "blocked", "message": "; ".join(policy["blocked"])})
+        if self.path == "/api/run":
+            args, kwargs = body.get("args", []), body.get("kwargs", {}) or {}
+            if not isinstance(args, list) or not isinstance(kwargs, dict):
+                return self._json({"error": "args must be a list and kwargs an object"}, 400)
+            return self._json(run_once(code, run["contract"]["function_name"], args, kwargs))
+        v = pipeline._verify(code, run["contract"], run["test_cases"], execution_mode(),
+                             frozenset((run.get("consensus") or {}).get("disputed") or []))
+        return self._json({"ok": True, "status": v["status"], "counts": v["counts"], "results": v["results"],
+                           "total": len(run["test_cases"]), "load_error": v.get("load_error")})
 
     @staticmethod
     def _repairs(body: dict) -> int:

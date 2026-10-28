@@ -14,7 +14,8 @@
 | **0:00–0:20** | Title slide | "Developers spend hours turning written requirements into boilerplate. AI tools write code fast, but you still have to read every line to know whether it did what you *meant*. We built SnipForge to make AI code **reviewable in a minute**." |
 | **0:20–0:50** | Click chip **Business-rule boundaries** → **Analyze** | "First it writes down its interpretation: numbered requirements, R1 to R5, plus its assumptions. You can edit them before any code exists. The function name and parameters in your requirement are binding, so the model can't invent its own." |
 | **0:50–1:25** | **Confirm & generate**, then watch the Pipeline panel | "Now the key idea: **tests are written from the requirements before the code exists, then frozen**. The model writing the code never sees them. We generate three independent implementations and cross-check them. Everything runs in an isolated sandbox, and **our** harness decides pass or fail, not the AI." |
-| **1:25–1:50** | **Requirement evidence** tab, then **Tests** tab | "Every requirement is linked to the tests that prove it: 499 gives 40, 500 gives 0. If something isn't tested, it says *not tested*. We deliberately don't show a made-up confidence score." |
+| **1:25–1:35** | **▶ Run** tab: type an input, press ⌘/Ctrl+Enter | "And you can run it instantly on any input, with no AI call, in the same sandbox." |
+| **1:35–1:50** | **Requirement evidence** tab, then **Tests** tab | "Every requirement is linked to the tests that prove it: 499 gives 40, 500 gives 0. If something isn't tested, it says *not tested*. We deliberately don't show a made-up confidence score." |
 | **1:50–2:15** | Chip **Ambiguous (clarify)** → **Analyze**, then pick an option | "When a requirement is vague, it doesn't guess. It asks a **multiple-choice question**: which field identifies a duplicate, and which record to keep. One click, and the answer becomes a requirement." |
 | **2:15–2:35** | Back on shipping: **✎ Revise** "make free shipping start at 750" | "Requirements change. It shows exactly which requirement changed, **keeps the old tests as regression checks**, and shows the one-line code diff." |
 | **2:35–2:45** | **🧬 Test the tests** | "And how do we know the tests are any good? We deliberately plant bugs. **The tests caught 5 out of 5.**" *(read the real number)* |
@@ -31,6 +32,8 @@ If you run short, cut **Revise** first, then **Ambiguous**. Never cut the eviden
 2. **Tests before code, frozen.** Designed from requirements only; the code model never sees them; repair can change code only (hash-checked). *Why it matters:* the AI can't "pass" by quietly changing the tests, which AI coding agents are known to do.
 3. **Requirement evidence table.** R1 → T1, T5 → passed. "Not tested" and "disputed" are shown honestly. *Why it matters:* a reviewer checks one table instead of reading all the code.
 4. **Multiple-choice clarification.** When something is ambiguous, it asks with options, a recommendation, and an "Other" box. *Why it matters:* it doesn't silently guess business rules.
+
+5. **▶ Run (instant playground).** Edit the code, type inputs (JSON), and see the return value, exceptions and `print` output in milliseconds, with no AI call. "Run frozen tests" re-checks your edits against the frozen tests in about a second. *Why it matters:* a fast, tangible demo, and developers can poke at the code before trusting it.
 
 ### Show if time allows
 5. **🧬 Test the tests (mutation testing).** Plant small bugs, see which the tests catch, no AI calls. Strongest technical point.

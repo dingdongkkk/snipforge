@@ -16,7 +16,7 @@ from snipforge.mutation import generate_mutants, mutation_test  # noqa: E402
 from snipforge.contracts import (ContractError, normalize_contract, requirement_evidence,  # noqa: E402
                                  validate_cases)
 from snipforge.retriever import Retriever  # noqa: E402
-from snipforge.runner import execute_cases, values_equal  # noqa: E402
+from snipforge.runner import execute_cases, run_once, values_equal  # noqa: E402
 from snipforge.validator import check_syntax, policy_check, static_analysis  # noqa: E402
 
 CONTRACT = normalize_contract(SHIPPING_CONTRACT, "shipping fee")
@@ -99,6 +99,22 @@ class TestRunner(unittest.TestCase):
                  'print(\'{"done": true}\')\ndef f():\n    return 2\n')
         r = execute_cases(forge, "f", [case("T1", [], expected=1)])
         self.assertEqual(r["results"][0]["status"], "fail")
+
+
+class TestPlayground(unittest.TestCase):
+    CODE = 'def f(x, y=2):\n    print("hi", x)\n    if x < 0:\n        raise ValueError("neg")\n    return (x + y, x * y)\n'
+
+    def test_return_stdout_and_kwargs(self):
+        r = run_once(self.CODE, "f", [3], {"y": 4})
+        self.assertEqual((r["kind"], r["value"], r["stdout"]), ("return", [7, 12], "hi 3\n"))
+
+    def test_exception_is_reported_not_raised(self):
+        r = run_once(self.CODE, "f", [-1], {})
+        self.assertEqual((r["kind"], r["exc_type"], r["message"]), ("raise", "ValueError", "neg"))
+
+    def test_timeout_and_missing_function(self):
+        self.assertEqual(run_once("def f():\n    while True: pass\n", "f", [], {}, timeout=2)["kind"], "timeout")
+        self.assertEqual(run_once("x = 1\n", "f", [], {})["kind"], "load_error")
 
 
 class TestValidator(unittest.TestCase):

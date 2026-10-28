@@ -84,6 +84,12 @@ If a test fails, the model gets the exact failing input, expected value and actu
 The status shows *frozen tests unchanged: yes*. The Code tab has a **Repair diff** button.
 If the live model gets it right first time, there's no repair to show. That's fine; say so.
 
+### ▶ Run: instant playground (fastest thing to show)
+**Click:** the **▶ Run** tab. The inputs are prefilled from a test case. Type any value (JSON: `500`, `true`, `"text"`, `[1,2]`)
+and press **⌘/Ctrl+Enter**. The return value, exception, and `print` output appear in milliseconds, with **no AI call**,
+in the same isolated sandbox. You can edit the code, then click **Run frozen tests** to re-check it against the frozen tests.
+**Demo trick:** introduce a bug on purpose (e.g. change `< 500` to `<= 500`), run the frozen tests, and watch them catch it.
+
 ### ⑥ ⚡ Challenge this snippet (new)
 **Click:** the **⚡ Challenge** tab, then **Challenge this snippet**.
 **You see:** up to 10 new edge cases (threshold ±1 like 499.99 / 500.0 / 500.01, invalid inputs, odd flags, properties

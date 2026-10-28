@@ -183,6 +183,7 @@ ul.plain { margin: 4px 0 12px; padding-left: 18px; }
       <div class="tabs" id="tabs">
         <button class="tab active" data-tab="evidence">Requirement evidence</button>
         <button class="tab" data-tab="code">Code</button>
+        <button class="tab" data-tab="run">▶ Run</button>
         <button class="tab" data-tab="tests">Tests</button>
         <button class="tab" data-tab="challenge">⚡ Challenge</button>
         <button class="tab" data-tab="revise">✎ Revise</button>
@@ -477,6 +478,8 @@ function renderPanel() {
         return `<tr><td class="mono">${esc(c.id)}${c.origin ? `<div class="badge">${esc(c.origin)}</div>` : ""}</td><td class="mono">${esc(c.requirement_ids.join(","))}</td><td class="mono">${esc(call)}<div class="sub">${esc(c.description)}</div></td>
           <td class="mono">${esc(exp)}</td><td class="mono">${x ? (typeof x.actual === "string" ? esc(x.actual) : j(x.actual)) : "–"}${x?.bounded_error && x.status !== "pass" ? `<div class="sub">${esc(x.bounded_error)}</div>` : ""}</td>
           <td>${x ? pill(x.status) : pill("not_executed")}</td></tr>`; }).join("") + `</table></div>`;
+  } else if (S.tab === "run") {
+    renderRun(p, r);
   } else if (S.tab === "challenge") {
     renderChallenge(p, r);
   } else if (S.tab === "revise") {
@@ -523,6 +526,116 @@ function versionNote(r) {
   const tc = r.test_changes || {};
   return `<div class="banner info"><b>v${r.version}</b>: ${esc(r.change || "")}<div class="sub">Tests kept ${tc.kept?.length || 0} · removed ${tc.removed?.length || 0} · added ${tc.added?.length || 0}` +
     (r.regression ? ` · regression checks on unchanged behaviour: <b>${r.regression.pass}/${r.regression.total} pass</b>` : "") + `</div></div>`;
+}
+
+// ---------- ▶ Run: instant playground (no model calls; same isolated sandbox) ----------
+function renderRun(p, r) {
+  if (!r) return needRun(p);
+  if (!S.play || S.play.runId !== r.run_id) {
+    const sample = r.test_cases.find(c => "expected" in c && !c.property) || r.test_cases[0];
+    const params = r.contract.parameters;
+    const vals = {};
+    params.forEach((q, i) => {
+      if (sample && i < sample.args.length) vals[q.name] = JSON.stringify(sample.args[i]);
+      else if (sample && q.name in sample.kwargs) vals[q.name] = JSON.stringify(sample.kwargs[q.name]);
+      else vals[q.name] = "";
+    });
+    S.play = { runId: r.run_id, code: r.code, vals, history: [] };
+  }
+  const pl = S.play, params = r.contract.parameters;
+  p.innerHTML = `<p class="lead">Run the function instantly on your own inputs: <b>no AI call</b>, same isolated sandbox. Edit the code freely; inputs are JSON (<span class="mono">500</span>, <span class="mono">true</span>, <span class="mono">"text"</span>, <span class="mono">[1, 2]</span>). ⌘/Ctrl + Enter runs.</p>
+    <div class="play">
+      <div class="play-editor">
+        <div class="play-head"><span class="mono">solution.py${pl.code !== r.code ? ' <span class="badge">edited</span>' : ""}</span>
+          <button class="ghost" id="preset" ${pl.code === r.code ? "disabled" : ""}>Reset to generated</button></div>
+        <textarea id="pcode" class="mono" spellcheck="false" aria-label="Function code">${esc(pl.code)}</textarea>
+      </div>
+      <div class="play-io">
+        <div class="sig mono">${esc(r.contract.function_name)}(${params.map(q => esc(q.name)).join(", ")})</div>
+        ${params.map(q => `<label class="field"><span>${esc(q.name)} <span class="muted">${esc(q.type || "")}${q.description && q.description.startsWith("default") ? " · " + esc(q.description) : ""}</span></span>
+          <input type="text" class="mono" data-arg="${esc(q.name)}" value="${esc(pl.vals[q.name] ?? "")}" placeholder="${q.description && q.description.startsWith("default") ? "leave empty for default" : "JSON value"}"></label>`).join("")}
+        <div class="toolbar" style="justify-content:flex-start;margin-top:10px">
+          <button class="primary" id="prun">▶ Run</button><button class="ghost" id="ptests">Run frozen tests (${r.test_cases.length})</button></div>
+        <div id="pout" class="console" aria-live="polite">${pl.history.length ? pl.history.map(consoleEntry).join("") : `<code class="muted">Output appears here.</code>`}</div>
+      </div>
+    </div>`;
+  const code = $("pcode");
+  code.oninput = () => { pl.code = code.value; };
+  code.onkeydown = e => {
+    if (e.key === "Tab") { e.preventDefault(); const a = code.selectionStart; code.setRangeText("    ", a, code.selectionEnd, "end"); pl.code = code.value; }
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); playRun(); }
+  };
+  p.querySelectorAll("[data-arg]").forEach(i => {
+    i.oninput = () => { pl.vals[i.dataset.arg] = i.value; };
+    i.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); playRun(); } };
+  });
+  $("prun").onclick = playRun;
+  $("ptests").onclick = playTests;
+  $("preset").onclick = () => { pl.code = r.code; renderPanel(); };
+}
+
+function playArgs() {
+  const args = [], kwargs = {}, notes = [];
+  let positional = true;
+  for (const q of S.result.contract.parameters) {
+    const raw = (S.play.vals[q.name] ?? "").trim();
+    if (!raw) { positional = false; continue; }  // empty = use the default
+    let v;
+    try { v = JSON.parse(raw); } catch { v = raw; notes.push(`${q.name} treated as the text "${raw}"`); }
+    if (positional) args.push(v); else kwargs[q.name] = v;
+  }
+  return { args, kwargs, notes };
+}
+
+function consoleEntry(h) {
+  const head = `<div class="con-call"><code>›› ${esc(h.call)}</code><span>${esc(h.meta || "")}</span></div>`;
+  let body;
+  if (h.kind === "return") body = `<code class="con-ok">${esc(JSON.stringify(h.value, null, 2))}</code>`;
+  else if (h.kind === "raise") body = `<code class="con-err">✗ raised ${esc(h.exc_type)}: ${esc(h.message)}</code>`;
+  else if (h.kind === "tests") body = `<code class="${h.ok ? "con-ok" : "con-err"}">${esc(h.text)}</code>`;
+  else body = `<code class="con-err">✗ ${esc(h.kind)}: ${esc(h.message || "")}</code>`;
+  const out = h.stdout ? `<code class="con-out">${esc(h.stdout.replace(/\n$/, ""))}</code>` : "";
+  const notes = h.notes && h.notes.length ? `<code class="muted">note: ${esc(h.notes.join("; "))}</code>` : "";
+  return `<div class="con-entry">${head}${notes}${out}${body}</div>`;
+}
+
+function pushConsole(h) {
+  S.play.history.unshift(h); S.play.history = S.play.history.slice(0, 6);
+  const out = $("pout"); if (out) out.innerHTML = S.play.history.map(consoleEntry).join("");
+}
+
+async function playRun() {
+  const r = S.result, { args, kwargs, notes } = playArgs();
+  const call = `${r.contract.function_name}(${[...args.map(a => JSON.stringify(a)), ...Object.entries(kwargs).map(([k, v]) => k + "=" + JSON.stringify(v))].join(", ")})`;
+  const btn = $("prun"); btn.disabled = true;
+  const t0 = performance.now();
+  try {
+    const res = await (await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ run_id: r.run_id, code: S.play.code, args, kwargs }) })).json();
+    if (res.error) throw new Error(res.error);
+    const ms = Math.round(performance.now() - t0);
+    pushConsole({ ...res, call, notes, meta: `${res.duration_ms ?? "–"} ms in function · ${ms} ms round trip${S.play.code !== r.code ? " · edited code" : ""}` });
+  } catch (e) { pushConsole({ kind: "error", message: String(e.message || e), call }); }
+  btn.disabled = false;
+}
+
+async function playTests() {
+  const r = S.result, btn = $("ptests"); btn.disabled = true;
+  try {
+    const res = await (await fetch("/api/run-tests", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ run_id: r.run_id, code: S.play.code }) })).json();
+    if (res.error) throw new Error(res.error);
+    if (!res.ok) { pushConsole({ kind: res.kind, message: res.message, call: "frozen tests" }); }
+    else {
+      const byId = Object.fromEntries(r.test_cases.map(c => [c.id, c]));
+      const bad = res.results.filter(x => x.status !== "pass" && x.status !== "disputed");
+      const eff = res.total - (res.counts.disputed || 0);
+      const lines = [`${res.counts.pass}/${eff} frozen tests pass${res.counts.disputed ? ` (+${res.counts.disputed} disputed)` : ""}${S.play.code !== r.code ? " on your edited code" : ""}`]
+        .concat(bad.map(x => `  ✗ ${x.test_id} ${callText(byId[x.test_id])}: expected ${expText(byId[x.test_id])}, got ${actualText(x)}`));
+      pushConsole({ kind: "tests", ok: !bad.length, text: lines.join("\n"), call: "frozen tests" });
+    }
+  } catch (e) { pushConsole({ kind: "error", message: String(e.message || e), call: "frozen tests" }); }
+  btn.disabled = false;
 }
 
 // ---------- 1. challenge ----------
@@ -845,7 +958,7 @@ button:not(:disabled):active { transform:translateY(1px); }
   const heading = document.createElement('div'); heading.className = 'output-heading';
   heading.innerHTML = '<strong>Output</strong><span>READ · TEST · ITERATE</span>';
   byId('tabs').before(heading);
-  const tabLabels = { evidence:'Evidence', code:'Code', tests:'Tests', challenge:'Challenge', revise:'Revise', mutation:'Test the tests', explain:'Explanation', trace:'Trace' };
+  const tabLabels = { evidence:'Evidence', code:'Code', run:'▶ Run', tests:'Tests', challenge:'Challenge', revise:'Revise', mutation:'Test the tests', explain:'Explanation', trace:'Trace' };
   byId('tabs').setAttribute('role','tablist');
   byId('tabs').setAttribute('aria-label','Inspect generated function');
   byId('panel').setAttribute('role','tabpanel');
@@ -922,7 +1035,7 @@ button:not(:disabled):active { transform:translateY(1px); }
       empty.dataset.enhanced = 'true';
       const original = empty.innerHTML;
       const tab = document.querySelector('.tab.active')?.dataset.tab;
-      const titles = { evidence:'No results yet', code:'No implementation yet', tests:'No test suite loaded', challenge:'Challenge cases', revise:'Revise contract', mutation:'Mutation checks', explain:'Implementation notes', trace:'Execution trace' };
+      const titles = { evidence:'No results yet', code:'No implementation yet', run:'Run your function', tests:'No test suite loaded', challenge:'Challenge cases', revise:'Revise contract', mutation:'Mutation checks', explain:'Implementation notes', trace:'Execution trace' };
       empty.innerHTML = '<div class="empty-symbol" aria-hidden="true">'+(tab === 'code' ? '{ }' : '✓')+'</div><h2>'+titles[tab]+'</h2><p>'+original+'</p>'+(tab === 'evidence' ? '<div class="empty-flow"><b>Requirement</b><span>→</span><b>Code</b><span>→</span><b>Evidence</b></div><div class="empty-hint">Start with a requirement on the left, or try an example.</div>' : '');
     }
   };
@@ -1032,6 +1145,28 @@ body.is-busy .busy-bar { opacity:1; }
   .stat { padding:9px 12px; }
   #banner .banner { max-height:30vh; overflow-y:auto; }
 }
+
+/* ▶ Run playground */
+.play { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(260px,1fr); gap:14px; align-items:start; }
+@media (max-width:1150px) { .play { grid-template-columns:1fr; } }
+.play-editor { border:1px solid var(--line); border-radius:4px; overflow:hidden; background:var(--code-bg); }
+.play-head { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid #ffffff14; color:#cfd3da; font-size:12px; }
+.play-head button.ghost { color:#cfd3da; border-color:#ffffff22; padding:4px 10px; }
+#pcode { display:block; width:100%; min-height:300px; border:0; border-radius:0; background:transparent; color:#e6edf3;
+  font:12.5px/1.6 "JetBrains Mono",ui-monospace,monospace; padding:12px 14px; tab-size:4; white-space:pre; overflow:auto; resize:vertical; }
+#pcode:focus { box-shadow:none; outline:none; }
+.play-io .field { margin-top:8px; }
+.play-io .field > span { font-size:12px; color:var(--ink); }
+.console { margin-top:12px; background:var(--code-bg); color:#e6edf3; border-radius:4px; padding:10px 12px; min-height:120px;
+  font:12.5px/1.55 "JetBrains Mono",ui-monospace,monospace; overflow:auto; max-height:46vh; }
+.console code { display:block; white-space:pre-wrap; word-break:break-word; background:none; }
+.con-entry { padding:6px 0; border-bottom:1px dashed #ffffff1a; animation:reveal .22s ease-out; }
+.con-entry:last-child { border-bottom:0; }
+.con-entry:first-child { animation:reveal .22s ease-out, con-flash .9s ease-out; }
+@keyframes con-flash { from { background:#ffffff14; } to { background:transparent; } }
+.con-call { display:flex; justify-content:space-between; gap:10px; color:#9aa4b2; font-size:11.5px; }
+.con-call span { white-space:nowrap; }
+.con-ok { color:#a8e6b4; } .con-err { color:#f4a3a3; } .con-out { color:#d7c58c; } .console .muted { color:#8b93a1; }
 
 #fixture-flag { position:sticky; top:0; z-index:150; flex:none; padding:8px 16px; text-align:center; font-weight:600; font-size:12px;
   background:var(--bad); color:#fff; letter-spacing:.2px; }

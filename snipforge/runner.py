@@ -174,3 +174,40 @@ def execute_cases(code: str, entry_point: str, cases: list[dict], timeout: float
                 "results": [{**_judge(c, outs.get(c["id"])), **({} if c["id"] in outs else {"bounded_error": err})}
                             for c in cases]}
     return {"mode": mode, "results": [_judge(c, outs.get(c["id"])) for c in cases]}
+
+
+def run_once(code: str, entry_point: str, args: list, kwargs: dict, timeout: float = 5.0,
+             mode: str | None = None) -> dict:
+    """Playground: call the function once on user-supplied inputs (no model call, no expectations).
+
+    Same isolation as the test runner. Returns {ok, kind: return|raise|timeout|load_error|not_executed,
+    value?, exc_type?, message?, stdout, duration_ms, mode}.
+    """
+    mode = mode or execution_mode()
+    if mode == "none":
+        return {"ok": False, "kind": "not_executed", "message": "execution is unavailable", "mode": mode}
+    nonce = "@@" + secrets.token_hex(16) + "@@"
+    job = {"nonce": nonce, "code": code, "entry_point": entry_point,
+           "cases": [{"id": "P1", "args": args, "kwargs": kwargs}]}
+    try:
+        stdout, stderr = _run_child(job, mode, timeout)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "kind": "timeout", "message": f"timed out after {timeout:.0f}s", "mode": mode}
+    out = None
+    for line in stdout.splitlines():
+        if line.startswith(nonce):
+            try:
+                rec = json.loads(line[len(nonce):])
+            except json.JSONDecodeError:
+                continue
+            if "load_error" in rec:
+                return {"ok": False, "kind": "load_error", "message": rec["load_error"], "mode": mode}
+            if rec.get("id") == "P1":
+                out = rec
+    if out is None:
+        msg = (stderr.strip().splitlines() or ["no output"])[-1][:400]
+        return {"ok": False, "kind": "load_error", "message": "runner crashed: " + msg, "mode": mode}
+    base = {"stdout": out.get("stdout", ""), "duration_ms": out.get("duration_ms"), "mode": mode}
+    if out["kind"] == "raise":
+        return {"ok": True, "kind": "raise", "exc_type": out["exc_type"], "message": out["message"], **base}
+    return {"ok": True, "kind": "return", "value": out["value"], **base}
